@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Clinova Blueprint</title>
+<style>
+:root{
+  --bg:#F3F6F4; --surface:#FFFFFF; --surface-2:#EAF1EC; --surface-3:#F7FAF8;
+  --ink:#132420; --ink-soft:#54675F; --ink-faint:#8AA098;
+  --accent:#0E7C6B; --accent-soft:#D8EEE7;
+  --warm:#B8722A; --warm-soft:#F7E6CF;
+  --line:#DAE4DE; --line-strong:#B9C9C1;
+  --shadow:0 1px 2px rgba(19,36,32,.07), 0 8px 24px -16px rgba(19,36,32,.18);
+  --radius:12px;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0B1613; --surface:#101E1A; --surface-2:#16261F; --surface-3:#0E1B17;
+    --ink:#E7F1ED; --ink-soft:#9FB6AC; --ink-faint:#5E7A70;
+    --accent:#3FCDAF; --accent-soft:#173A32;
+    --warm:#E8A65C; --warm-soft:#3A2A14;
+    --line:#223530; --line-strong:#2C4038;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 24px -16px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0B1613; --surface:#101E1A; --surface-2:#16261F; --surface-3:#0E1B17;
+  --ink:#E7F1ED; --ink-soft:#9FB6AC; --ink-faint:#5E7A70;
+  --accent:#3FCDAF; --accent-soft:#173A32;
+  --warm:#E8A65C; --warm-soft:#3A2A14;
+  --line:#223530; --line-strong:#2C4038;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 24px -16px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;}
+body{background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans',system-ui,sans-serif;line-height:1.6;padding-inline:20px;padding-block:0 48px;}
+h1,h2,h3{font-family:'Fraunces',Georgia,serif;font-weight:600;text-wrap:balance;margin:0;color:var(--ink);}
+p{margin:0 0 12px;max-width:70ch;color:var(--ink);}
+.mono{font-family:'IBM Plex Mono',monospace;}
+.wrap{max-width:1180px;margin:0 auto;}
+a{color:var(--accent);}
+img{max-width:100%;}
+
+/* header / nav */
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:color-mix(in srgb, var(--bg) 88%, transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);margin:0 -20px 40px;padding:14px 20px 0;}
+.brand-row{display:flex;align-items:center;justify-content:space-between;gap:16px;max-width:1180px;margin:0 auto;flex-wrap:wrap;}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand svg{width:34px;height:34px;flex:none;}
+.brand .word{font-family:'Fraunces',serif;font-weight:600;font-size:1.25rem;letter-spacing:.01em;}
+.doc-meta{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em;}
+nav.sections{display:flex;gap:6px;overflow-x:auto;max-width:1180px;margin:12px auto 0;padding-bottom:12px;scrollbar-width:thin;}
+nav.sections a{flex:none;font-family:'IBM Plex Mono',monospace;font-size:.74rem;text-transform:uppercase;letter-spacing:.05em;text-decoration:none;color:var(--ink-soft);background:var(--surface);border:1px solid var(--line);padding:7px 12px;border-radius:999px;transition:color .15s,border-color .15s;}
+nav.sections a:hover{color:var(--accent);border-color:var(--accent);}
+
+/* intro */
+.intro{display:grid;grid-template-columns:1.3fr 1fr;gap:32px;align-items:start;margin-bottom:56px;}
+@media (max-width:760px){.intro{grid-template-columns:1fr;}}
+.intro h1{font-size:2.1rem;}
+.intro .lede{font-size:1.05rem;color:var(--ink-soft);margin-top:10px;}
+.actor-legend{display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);}
+.actor-legend .row{display:flex;gap:10px;align-items:flex-start;font-size:.86rem;}
+.actor-legend .dot{width:9px;height:9px;border-radius:2px;margin-top:6px;flex:none;}
+.actor-legend b{font-family:'IBM Plex Mono',monospace;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;display:block;color:var(--ink);}
+
+/* sections */
+section{margin-bottom:64px;scroll-margin-top:110px;}
+.sheet-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:6px;display:block;}
+section > h2{font-size:1.6rem;margin-bottom:10px;}
+section > .dek{color:var(--ink-soft);max-width:68ch;margin-bottom:24px;}
+
+figure{margin:0 0 8px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;}
+figure .scroll{overflow-x:auto;}
+figure svg{display:block;margin:0 auto;height:auto;color:var(--ink);}
+figcaption{font-size:.82rem;color:var(--ink-soft);margin-top:12px;padding-top:12px;border-top:1px solid var(--line);}
+
+/* diagram element classes, reused across all inline SVGs */
+.node-rect{fill:var(--surface);stroke:var(--line-strong);stroke-width:1.6;}
+.node-rect.on-alt{fill:var(--surface-3);}
+.node-rect.accent{stroke:var(--accent);stroke-width:2;}
+.node-rect.dashed{stroke-dasharray:5 4;stroke:var(--ink-faint);fill:var(--surface-3);}
+.node-rect.warm{fill:var(--warm-soft);stroke:var(--warm);stroke-width:1.8;}
+.node-title{fill:var(--ink);font-size:12.5px;font-weight:600;font-family:'IBM Plex Sans',sans-serif;text-anchor:middle;}
+.node-sub{fill:var(--ink-soft);font-size:10px;font-family:'IBM Plex Mono',monospace;text-anchor:middle;}
+.field-text{fill:var(--ink-soft);font-size:10.5px;font-family:'IBM Plex Mono',monospace;}
+.field-pk{fill:var(--accent);font-size:10.5px;font-family:'IBM Plex Mono',monospace;font-weight:600;}
+.edge{stroke:var(--ink-faint);stroke-width:1.7;fill:none;}
+.edge.accent{stroke:var(--accent);stroke-width:1.9;}
+.edge.dashed{stroke-dasharray:4 4;}
+.edge.warm{stroke:var(--warm);}
+.edge-label{fill:var(--ink-soft);font-size:10.5px;font-family:'IBM Plex Mono',monospace;}
+.boundary{fill:var(--surface-2);stroke:var(--line-strong);stroke-width:1.6;stroke-dasharray:0;}
+.boundary-label{fill:var(--ink-soft);font-size:11px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.06em;text-anchor:middle;}
+.ellipse-uc{fill:var(--surface);stroke:var(--line-strong);stroke-width:1.6;}
+.actor-fig{fill:none;stroke:var(--ink-soft);stroke-width:3;stroke-linecap:round;}
+.actor-label{fill:var(--ink);font-size:12px;font-weight:600;font-family:'IBM Plex Sans',sans-serif;text-anchor:middle;}
+.diamond{fill:var(--surface-3);stroke:var(--line-strong);stroke-width:1.6;}
+.card-title{fill:var(--ink);font-size:12px;font-weight:700;font-family:'IBM Plex Sans',sans-serif;text-anchor:middle;letter-spacing:.02em;}
+
+/* logo swatches */
+.logo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+@media (max-width:760px){.logo-grid{grid-template-columns:1fr;}}
+.swatch{border-radius:var(--radius);padding:28px 16px;display:flex;flex-direction:column;align-items:center;gap:14px;border:1px solid var(--line);}
+.swatch.light{background:#FFFFFF;}
+.swatch.dark{background:#0B1613;}
+.swatch.tint{background:var(--accent-soft);}
+.swatch .word{font-family:'Fraunces',serif;font-weight:600;font-size:1.3rem;letter-spacing:.01em;}
+.swatch.light .word,.swatch.tint .word{color:#132420;}
+.swatch.dark .word{color:#E7F1ED;}
+.swatch small{font-family:'IBM Plex Mono',monospace;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;opacity:.6;}
+.swatch.light small, .swatch.tint small{color:#132420;}
+.swatch.dark small{color:#E7F1ED;}
+.rationale{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:18px;}
+@media (max-width:760px){.rationale{grid-template-columns:1fr;}}
+.rationale .item{background:var(--surface-3);border:1px solid var(--line);border-radius:10px;padding:14px 16px;}
+.rationale .item b{display:block;font-family:'IBM Plex Mono',monospace;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--accent);margin-bottom:6px;}
+.rationale .item p{font-size:.86rem;margin:0;color:var(--ink-soft);}
+
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:.86rem;}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;}
+th{font-family:'IBM Plex Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:500;}
+td.mono{font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--ink-soft);}
+.table-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);}
+.table-wrap table{min-width:640px;}
+
+/* admin mockup */
+.admin-shell{display:grid;grid-template-columns:200px 1fr;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--surface);box-shadow:var(--shadow);}
+@media (max-width:700px){.admin-shell{grid-template-columns:1fr;}.admin-sidebar{display:none;}}
+.admin-sidebar{background:var(--surface-2);border-right:1px solid var(--line);padding:16px 12px;display:flex;flex-direction:column;gap:2px;}
+.admin-sidebar .mini-brand{display:flex;align-items:center;gap:7px;padding:4px 8px 14px;}
+.admin-sidebar .mini-brand svg{width:18px;height:18px;}
+.admin-sidebar .mini-brand span{font-family:'Fraunces',serif;font-weight:600;font-size:.92rem;}
+.admin-sidebar a{display:flex;align-items:center;gap:9px;font-size:.82rem;color:var(--ink-soft);text-decoration:none;padding:8px 10px;border-radius:8px;}
+.admin-sidebar a.active{background:var(--surface);color:var(--accent);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.06);}
+.admin-sidebar a .ico{width:7px;height:7px;border-radius:2px;background:currentColor;opacity:.55;flex:none;}
+.admin-main{padding:18px 20px 22px;min-width:0;}
+.admin-topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;}
+.admin-search{font-family:'IBM Plex Mono',monospace;font-size:.76rem;color:var(--ink-faint);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:7px 12px;min-width:200px;}
+.admin-who{display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--ink-soft);}
+.admin-avatar{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:.68rem;font-weight:600;flex:none;}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+@media (max-width:640px){.kpi-row{grid-template-columns:1fr 1fr;}}
+.kpi{background:var(--surface-3);border:1px solid var(--line);border-radius:10px;padding:12px 14px;}
+.kpi .label{font-family:'IBM Plex Mono',monospace;font-size:.66rem;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-faint);}
+.kpi .value{font-family:'Fraunces',serif;font-size:1.4rem;font-weight:600;margin-top:4px;font-variant-numeric:tabular-nums;}
+.kpi .delta{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--accent);margin-top:2px;}
+.admin-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:14px;}
+@media (max-width:760px){.admin-grid{grid-template-columns:1fr;}}
+.panel{background:var(--surface-3);border:1px solid var(--line);border-radius:10px;padding:14px 16px;}
+.panel h4{font-family:'IBM Plex Sans',sans-serif;font-size:.82rem;font-weight:600;margin:0 0 10px;}
+.mini-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);font-size:.78rem;}
+.mini-row:last-child{border-bottom:none;}
+.mini-row .t{color:var(--ink);font-weight:500;}
+.mini-row .s{color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;font-size:.68rem;}
+.pill{font-family:'IBM Plex Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:.03em;padding:2px 8px;border-radius:999px;flex:none;}
+.pill.pub{background:var(--accent-soft);color:var(--accent);}
+.pill.rev{background:var(--warm-soft);color:var(--warm);}
+.bars{display:flex;align-items:flex-end;gap:6px;height:64px;margin-top:6px;}
+.bars .bar{flex:1;background:var(--accent);border-radius:3px 3px 0 0;opacity:.85;}
+.bars .bar.peak{opacity:1;}
+.bar-days{display:flex;gap:6px;margin-top:4px;}
+.bar-days span{flex:1;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:var(--ink-faint);}
+
+/* stack chips */
+.chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.chip{font-family:'IBM Plex Mono',monospace;font-size:.74rem;background:var(--surface-3);border:1px solid var(--line);padding:5px 11px;border-radius:7px;color:var(--ink-soft);}
+.stack-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:20px;}
+@media (max-width:700px){.stack-grid{grid-template-columns:1fr;}}
+.stack-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);}
+.stack-card h3{font-size:1rem;margin-bottom:4px;}
+.stack-card .role{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;}
+.next-steps{counter-reset:step;list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0;}
+.next-steps li{counter-increment:step;position:relative;padding:14px 0 14px 40px;border-bottom:1px solid var(--line);}
+.next-steps li:last-child{border-bottom:none;}
+.next-steps li::before{content:counter(step);position:absolute;left:0;top:14px;width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-family:'IBM Plex Mono',monospace;font-size:.78rem;font-weight:600;display:flex;align-items:center;justify-content:center;}
+.next-steps b{display:block;font-size:.92rem;margin-bottom:2px;}
+.next-steps span{font-size:.84rem;color:var(--ink-soft);}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+<header class="top">
+  <div class="brand-row">
+    <div class="brand">
+      <svg viewBox="0 0 100 100" role="img" aria-label="Clinova logomark">
+        <path d="M 73 31 A 30 30 0 1 0 73 69" fill="none" stroke="var(--accent)" stroke-width="9" stroke-linecap="round"/>
+        <path d="M 73 69 L 81 69 L 86 58 L 93 78 L 98 66" fill="none" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="73" cy="31" r="6" fill="var(--warm)"/>
+      </svg>
+      <span class="word">Clinova</span>
+    </div>
+    <span class="doc-meta">Blueprint v0.1 &middot; Draft &middot; 23 Sep 2026</span>
+  </div>
+  <nav class="sections">
+    <a href="#logo">Identity</a>
+    <a href="#usecases">Use Cases</a>
+    <a href="#flows">User Flows</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#erd">Data Model</a>
+    <a href="#admin">Admin Console</a>
+    <a href="#stack">Tech Stack</a>
+  </nav>
+</header>
+
+<div class="wrap">
+
+  <div class="intro">
+    <div>
+      <h1>Clinova &mdash; Product &amp; Systems Blueprint</h1>
+      <p class="lede">A focus-and-study companion for nursing and midwifery students &mdash; study library, AI practice, timed focus sessions, and flashcards on the student side; content, question-bank, and user administration on the other. This document is the design pass before we open an IDE: identity, actors, flows, architecture, and schema, sequenced so the Laravel + MySQL + React build has something solid to scaffold against.</p>
+    </div>
+    <div class="actor-legend">
+      <div class="row"><span class="dot" style="background:var(--accent)"></span><div><b>Student</b>Primary user. Studies, practices, tracks streaks. Scoped to their own track (Nursing / Midwifery) and data.</div></div>
+      <div class="row"><span class="dot" style="background:var(--warm)"></span><div><b>Admin</b>Operates content, users, and the question bank. Same web app, role-gated routes and API middleware.</div></div>
+      <div class="row"><span class="dot" style="background:var(--ink-faint)"></span><div><b>External &mdash; LLM API</b>Called server-side only, to generate/refresh AI Practice questions. Never touched directly by the client.</div></div>
+    </div>
+  </div>
+
+  <!-- ============ IDENTITY ============ -->
+  <section id="logo">
+    <span class="sheet-eyebrow">Sheet 01</span>
+    <h2>Identity</h2>
+    <p class="dek">The mark reads as a single stroke: a heartbeat breaks the arc on one end, an amber cursor-dot caps the other &mdash; clinical vitals and an active study session, drawn as one open &quot;C&quot;. Open on the right so it also doubles as a page corner or a &quot;play&quot; cue at small sizes.</p>
+
+    <div class="logo-grid">
+      <div class="swatch light">
+        <svg viewBox="0 0 100 100" width="72" height="72" role="img" aria-label="Clinova mark on light ground">
+          <path d="M 73 31 A 30 30 0 1 0 73 69" fill="none" stroke="#0E7C6B" stroke-width="9" stroke-linecap="round"/>
+          <path d="M 73 69 L 81 69 L 86 58 L 93 78 L 98 66" fill="none" stroke="#0E7C6B" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="73" cy="31" r="6" fill="#B8722A"/>
+        </svg>
+        <span class="word">Clinova</span>
+        <small>Primary lockup &mdash; light</small>
+      </div>
+      <div class="swatch dark">
+        <svg viewBox="0 0 100 100" width="72" height="72" role="img" aria-label="Clinova mark on dark ground">
+          <path d="M 73 31 A 30 30 0 1 0 73 69" fill="none" stroke="#3FCDAF" stroke-width="9" stroke-linecap="round"/>
+          <path d="M 73 69 L 81 69 L 86 58 L 93 78 L 98 66" fill="none" stroke="#3FCDAF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="73" cy="31" r="6" fill="#E8A65C"/>
+        </svg>
+        <span class="word">Clinova</span>
+        <small>Reversed &mdash; dark</small>
+      </div>
+      <div class="swatch tint">
+        <svg viewBox="0 0 100 100" width="72" height="72" role="img" aria-label="Clinova mark, monochrome">
+          <path d="M 73 31 A 30 30 0 1 0 73 69" fill="none" stroke="#132420" stroke-width="9" stroke-linecap="round"/>
+          <path d="M 73 69 L 81 69 L 86 58 L 93 78 L 98 66" fill="none" stroke="#132420" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="73" cy="31" r="6" fill="#132420"/>
+        </svg>
+        <span class="word">Clinova</span>
+        <small>Monochrome &mdash; favicon / stamp</small>
+      </div>
+    </div>
+
+    <div class="rationale">
+      <div class="item"><b>Pulse &rarr; care</b><p>The open arc is a single continuous stroke, not a closed ring &mdash; it's meant to feel drawn mid-motion, like a session in progress rather than a static badge.</p></div>
+      <div class="item"><b>Amber dot &rarr; focus</b><p>A second, warm accent (never the same teal) marks &quot;active&quot; &mdash; reused across the app for running timers, unread badges, and the one warm chip in the palette below.</p></div>
+      <div class="item"><b>Scales down clean</b><p>Two shapes and one dot survive a 16px favicon; no gradients or fine detail to lose. Same mark works as the admin sidebar glyph at 18px.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ USE CASES ============ -->
+  <section id="usecases">
+    <span class="sheet-eyebrow">Sheet 02</span>
+    <h2>Actors &amp; Use Cases</h2>
+    <p class="dek">Two human actors share one system; the only external dependency is the LLM call behind AI Practice, which is why it's drawn outside the boundary and reached through a queued job rather than directly.</p>
+    <figure>
+      <div class="scroll">
+      <svg viewBox="0 0 1000 700" width="1000" role="img" aria-label="Use case diagram: Student and Admin actors against the Clinova Platform boundary, with AI Practice depending on an external LLM API">
+        <defs>
+          <marker id="arrow-uc" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--ink-faint)"/></marker>
+          <marker id="arrow-uc-warm" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--warm)"/></marker>
+        </defs>
+        <rect class="boundary" x="170" y="20" width="640" height="580" rx="16"/>
+        <text class="boundary-label" x="490" y="42">Clinova Platform</text>
+
+        <!-- student actor -->
+        <g class="actor-fig" transform="translate(60,300)">
+          <circle cx="0" cy="-26" r="10"/>
+          <line x1="0" y1="-16" x2="0" y2="14"/>
+          <line x1="-16" y1="-2" x2="16" y2="-2"/>
+          <line x1="0" y1="14" x2="-14" y2="34"/>
+          <line x1="0" y1="14" x2="14" y2="34"/>
+        </g>
+        <text class="actor-label" x="60" y="352">Student</text>
+
+        <!-- admin actor -->
+        <g class="actor-fig" transform="translate(910,300)">
+          <circle cx="0" cy="-26" r="10"/>
+          <line x1="0" y1="-16" x2="0" y2="14"/>
+          <line x1="-16" y1="-2" x2="16" y2="-2"/>
+          <line x1="0" y1="14" x2="-14" y2="34"/>
+          <line x1="0" y1="14" x2="14" y2="34"/>
+        </g>
+        <text class="actor-label" x="910" y="352">Admin</text>
+
+        <!-- student lines -->
+        <line class="edge" x1="60" y1="300" x2="215" y2="90"/>
+        <line class="edge" x1="60" y1="300" x2="215" y2="170"/>
+        <line class="edge" x1="60" y1="300" x2="215" y2="250"/>
+        <line class="edge" x1="60" y1="300" x2="215" y2="330"/>
+        <line class="edge" x1="60" y1="300" x2="215" y2="410"/>
+        <line class="edge" x1="60" y1="300" x2="355" y2="490"/>
+
+        <!-- admin lines -->
+        <line class="edge" x1="910" y1="300" x2="795" y2="110"/>
+        <line class="edge" x1="910" y1="300" x2="795" y2="210"/>
+        <line class="edge" x1="910" y1="300" x2="795" y2="310"/>
+        <line class="edge" x1="910" y1="300" x2="795" y2="410"/>
+        <line class="edge" x1="910" y1="300" x2="795" y2="510"/>
+
+        <!-- student use-case ellipses, cx=330 -->
+        <ellipse class="ellipse-uc" cx="330" cy="90" rx="118" ry="30"/>
+        <text class="node-title" x="330" y="94">Sign Up &amp; Choose Track</text>
+        <ellipse class="ellipse-uc" cx="330" cy="170" rx="118" ry="30"/>
+        <text class="node-title" x="330" y="174">Browse Study Library</text>
+        <ellipse class="ellipse-uc" cx="330" cy="250" rx="118" ry="30"/>
+        <text class="node-title" x="330" y="246">Run Focus Session</text>
+        <text class="node-sub" x="330" y="260">&quot;Study With Me&quot;</text>
+        <ellipse class="ellipse-uc" cx="330" cy="330" rx="118" ry="30"/>
+        <text class="node-title" x="330" y="334">Review Flashcards</text>
+        <ellipse class="ellipse-uc accent" cx="330" cy="410" rx="118" ry="30"/>
+        <text class="node-title" x="330" y="414">Take AI Practice Quiz</text>
+        <ellipse class="ellipse-uc" cx="470" cy="490" rx="118" ry="30"/>
+        <text class="node-title" x="470" y="494">Track Progress &amp; Streaks</text>
+
+        <!-- admin use-case ellipses, cx=680 -->
+        <ellipse class="ellipse-uc" cx="680" cy="110" rx="118" ry="30"/>
+        <text class="node-title" x="680" y="114">Manage Content &amp; Decks</text>
+        <ellipse class="ellipse-uc" cx="680" cy="210" rx="118" ry="30"/>
+        <text class="node-title" x="680" y="214">Curate Sound Library</text>
+        <ellipse class="ellipse-uc accent" cx="680" cy="310" rx="118" ry="30"/>
+        <text class="node-title" x="680" y="314">Curate AI Question Bank</text>
+        <ellipse class="ellipse-uc" cx="680" cy="410" rx="118" ry="30"/>
+        <text class="node-title" x="680" y="414">Manage Users</text>
+        <ellipse class="ellipse-uc" cx="680" cy="510" rx="118" ry="30"/>
+        <text class="node-title" x="680" y="514">View Analytics &amp; Broadcast</text>
+
+        <!-- external LLM dependency -->
+        <line class="edge dashed warm" x1="330" y1="440" x2="330" y2="618" marker-end="url(#arrow-uc-warm)"/>
+        <text class="edge-label" x="342" y="530">&laquo;uses&raquo;, queued job</text>
+        <rect class="node-rect warm" x="195" y="620" width="270" height="55" rx="8"/>
+        <text class="node-title" x="330" y="644">LLM API</text>
+        <text class="node-sub" x="330" y="660">Question generation &middot; external</text>
+      </svg>
+      </div>
+      <figcaption>Fig. 2.1 &mdash; Student and Admin sit outside the platform boundary; every use case inside it. Only AI Practice reaches past the boundary, and it does so through a queued job rather than a direct client call.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ============ USER FLOWS ============ -->
+  <section id="flows">
+    <span class="sheet-eyebrow">Sheet 03</span>
+    <h2>User Flows</h2>
+    <p class="dek">Three flows carry the product: getting a new student to their first session, the focus-timer loop that's the whole point of &quot;Study With Me&quot;, and the AI Practice request path (cache-first, LLM as fallback).</p>
+
+    <h3 style="font-size:1rem;margin-bottom:10px;">3.1 &mdash; Onboarding</h3>
+    <figure>
+      <div class="scroll">
+      <svg viewBox="0 0 980 170" width="980" role="img" aria-label="Onboarding flow: landing and sign up, verify email, choose track and level, set weekly goal, home dashboard">
+        <defs><marker id="arrow-fa" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--ink-faint)"/></marker></defs>
+        <g>
+          <rect class="node-rect" x="20" y="60" width="140" height="64" rx="9"/><text class="node-title" x="90" y="88">Landing /</text><text class="node-title" x="90" y="103">Sign Up</text>
+          <line class="edge" x1="160" y1="92" x2="218" y2="92" marker-end="url(#arrow-fa)"/>
+          <rect class="node-rect" x="220" y="60" width="140" height="64" rx="9"/><text class="node-title" x="290" y="88">Verify</text><text class="node-title" x="290" y="103">Email</text>
+          <line class="edge" x1="360" y1="92" x2="418" y2="92" marker-end="url(#arrow-fa)"/>
+          <rect class="node-rect" x="420" y="60" width="140" height="64" rx="9"/><text class="node-title" x="490" y="88">Choose Track</text><text class="node-title" x="490" y="103">&amp; Level</text>
+          <line class="edge" x1="560" y1="92" x2="618" y2="92" marker-end="url(#arrow-fa)"/>
+          <rect class="node-rect" x="620" y="60" width="140" height="64" rx="9"/><text class="node-title" x="690" y="88">Set Weekly</text><text class="node-title" x="690" y="103">Study Goal</text>
+          <line class="edge" x1="760" y1="92" x2="818" y2="92" marker-end="url(#arrow-fa)"/>
+          <rect class="node-rect accent" x="820" y="60" width="140" height="64" rx="9"/><text class="node-title" x="890" y="88">Home</text><text class="node-title" x="890" y="103">Dashboard</text>
+        </g>
+      </svg>
+      </div>
+      <figcaption>Fig. 3.1 &mdash; Track and level chosen once at signup drive every later content filter (library, decks, question bank).</figcaption>
+    </figure>
+
+    <h3 style="font-size:1rem;margin:24px 0 10px;">3.2 &mdash; Study With Me (focus session)</h3>
+    <figure>
+      <div class="scroll">
+      <svg viewBox="0 0 1180 430" width="1180" role="img" aria-label="Study With Me flow: home, tap Study With Me, choose duration, choose sound, start timer, decision on whether the timer reaches zero, then session complete, break screen, and progress updated; an early exit branches to an incomplete session record">
+        <defs><marker id="arrow-fb" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--ink-faint)"/></marker></defs>
+        <!-- row 1 -->
+        <rect class="node-rect" x="20" y="60" width="140" height="64" rx="9"/><text class="node-title" x="90" y="97">Home</text>
+        <line class="edge" x1="160" y1="92" x2="218" y2="92" marker-end="url(#arrow-fb)"/>
+        <rect class="node-rect" x="220" y="60" width="140" height="64" rx="9"/><text class="node-title" x="290" y="88">Tap &quot;Study</text><text class="node-title" x="290" y="103">With Me&quot;</text>
+        <line class="edge" x1="360" y1="92" x2="418" y2="92" marker-end="url(#arrow-fb)"/>
+        <rect class="node-rect" x="420" y="60" width="140" height="64" rx="9"/><text class="node-title" x="490" y="88">Choose Duration</text><text class="node-sub" x="490" y="103">25 / 50 / 90 / custom</text>
+        <line class="edge" x1="560" y1="92" x2="618" y2="92" marker-end="url(#arrow-fb)"/>
+        <rect class="node-rect" x="620" y="60" width="140" height="64" rx="9"/><text class="node-title" x="690" y="88">Choose Ambient</text><text class="node-title" x="690" y="103">Sound</text>
+        <line class="edge" x1="760" y1="92" x2="818" y2="92" marker-end="url(#arrow-fb)"/>
+        <rect class="node-rect accent" x="820" y="60" width="140" height="64" rx="9"/><text class="node-title" x="890" y="88">Start Focus</text><text class="node-title" x="890" y="103">Timer</text>
+
+        <!-- decision -->
+        <line class="edge" x1="890" y1="124" x2="890" y2="182" marker-end="url(#arrow-fb)"/>
+        <polygon class="diamond" points="890,185 980,235 890,285 800,235"/>
+        <text class="node-title" x="890" y="231">Timer</text><text class="node-title" x="890" y="245">reaches 0?</text>
+
+        <!-- no branch, side terminal -->
+        <line class="edge dashed" x1="980" y1="235" x2="1038" y2="235" marker-end="url(#arrow-fb)"/>
+        <text class="edge-label" x="985" y="222">no &mdash; exits early</text>
+        <rect class="node-rect dashed" x="1040" y="205" width="140" height="60" rx="9"/><text class="node-title" x="1110" y="230">Incomplete</text><text class="node-title" x="1110" y="245">Session Saved</text>
+
+        <!-- yes branch down -->
+        <line class="edge accent" x1="890" y1="285" x2="890" y2="343" marker-end="url(#arrow-fb)"/>
+        <text class="edge-label" x="900" y="318">yes</text>
+
+        <!-- row 3, right to left -->
+        <rect class="node-rect accent" x="820" y="345" width="140" height="64" rx="9"/><text class="node-title" x="890" y="373">Session</text><text class="node-title" x="890" y="388">Complete</text>
+        <line class="edge" x1="820" y1="377" x2="762" y2="377" marker-end="url(#arrow-fb)"/>
+        <rect class="node-rect" x="620" y="345" width="140" height="64" rx="9"/><text class="node-title" x="690" y="373">Break Screen</text><text class="node-sub" x="690" y="388">hydrate &middot; stretch</text>
+        <line class="edge" x1="620" y1="377" x2="562" y2="377" marker-end="url(#arrow-fb)"/>
+        <rect class="node-rect" x="380" y="345" width="180" height="64" rx="9"/><text class="node-title" x="470" y="373">Progress &amp; Streak</text><text class="node-title" x="470" y="388">Updated</text>
+        <text class="node-sub" x="220" y="380">&#8634; back to Home</text>
+      </svg>
+      </div>
+      <figcaption>Fig. 3.2 &mdash; The one decision that matters is whether the timer runs out or the student leaves early; either way a study_sessions row is written, complete or not, so streaks stay honest.</figcaption>
+    </figure>
+
+    <h3 style="font-size:1rem;margin:24px 0 10px;">3.3 &mdash; AI Practice</h3>
+    <figure>
+      <div class="scroll">
+      <svg viewBox="0 0 940 430" width="940" role="img" aria-label="AI Practice flow: home, AI practice, select topic, request questions, decision on whether a cached question bank exists, otherwise call the LLM API, then answer questions, score and explanations, and weak topic recommendations">
+        <defs><marker id="arrow-fc" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--ink-faint)"/></marker></defs>
+        <rect class="node-rect" x="20" y="60" width="140" height="64" rx="9"/><text class="node-title" x="90" y="97">Home</text>
+        <line class="edge" x1="160" y1="92" x2="218" y2="92" marker-end="url(#arrow-fc)"/>
+        <rect class="node-rect" x="220" y="60" width="140" height="64" rx="9"/><text class="node-title" x="290" y="97">AI Practice</text>
+        <line class="edge" x1="360" y1="92" x2="418" y2="92" marker-end="url(#arrow-fc)"/>
+        <rect class="node-rect" x="420" y="60" width="140" height="64" rx="9"/><text class="node-title" x="490" y="88">Select Topic /</text><text class="node-title" x="490" y="103">Subject</text>
+        <line class="edge" x1="560" y1="92" x2="618" y2="92" marker-end="url(#arrow-fc)"/>
+        <rect class="node-rect accent" x="620" y="60" width="140" height="64" rx="9"/><text class="node-title" x="690" y="88">Request Question</text><text class="node-title" x="690" y="103">Set</text>
+
+        <line class="edge" x1="690" y1="124" x2="690" y2="182" marker-end="url(#arrow-fc)"/>
+        <polygon class="diamond" points="690,185 780,235 690,285 600,235"/>
+        <text class="node-title" x="690" y="231">Cached bank</text><text class="node-title" x="690" y="245">available?</text>
+
+        <line class="edge dashed" x1="780" y1="235" x2="850" y2="235" marker-end="url(#arrow-fc)"/>
+        <text class="edge-label" x="782" y="222">no</text>
+        <rect class="node-rect dashed" x="770" y="205" width="150" height="60" rx="9"/><text class="node-title" x="845" y="230">Call LLM API</text><text class="node-sub" x="845" y="245">async &middot; queued</text>
+        <line class="edge dashed" x1="845" y1="265" x2="720" y2="343" marker-end="url(#arrow-fc)"/>
+
+        <line class="edge accent" x1="690" y1="285" x2="690" y2="343" marker-end="url(#arrow-fc)"/>
+        <text class="edge-label" x="700" y="318">yes</text>
+
+        <rect class="node-rect accent" x="620" y="345" width="140" height="64" rx="9"/><text class="node-title" x="690" y="373">Answer</text><text class="node-title" x="690" y="388">Questions</text>
+        <line class="edge" x1="620" y1="377" x2="562" y2="377" marker-end="url(#arrow-fc)"/>
+        <rect class="node-rect" x="400" y="345" width="160" height="64" rx="9"/><text class="node-title" x="480" y="373">Score &amp;</text><text class="node-title" x="480" y="388">Explanations</text>
+        <line class="edge" x1="400" y1="377" x2="342" y2="377" marker-end="url(#arrow-fc)"/>
+        <rect class="node-rect" x="160" y="345" width="180" height="64" rx="9"/><text class="node-title" x="250" y="373">Weak-Topic</text><text class="node-title" x="250" y="388">Recommendations</text>
+        <text class="node-sub" x="60" y="388">&rarr; links into Study Library</text>
+      </svg>
+      </div>
+      <figcaption>Fig. 3.3 &mdash; Question sets are cached per topic; the LLM is only called to backfill or refresh a bank, never inline on every quiz start, to keep cost and latency predictable.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ============ ARCHITECTURE ============ -->
+  <section id="architecture">
+    <span class="sheet-eyebrow">Sheet 04</span>
+    <h2>System Architecture</h2>
+    <p class="dek">One React SPA serves both surfaces &mdash; student app and admin console are the same bundle, split by role-gated routes, sharing one Laravel API and one Sanctum session. AI generation and notifications are pushed to a queue so nothing in the request path waits on an external API.</p>
+    <figure>
+      <div class="scroll">
+      <svg viewBox="0 0 1000 690" width="1000" role="img" aria-label="Layered architecture: React client layer for student and admin, over a Laravel API layer with six route groups, over supporting services (queue worker, cache, file storage), over MySQL, with the queue worker calling an external LLM API">
+        <defs><marker id="arrow-ar" markerWidth="9" markerHeight="9" refX="6.5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="var(--ink-faint)"/></marker></defs>
+
+        <!-- band 1: client -->
+        <text class="edge-label" x="20" y="30">CLIENT LAYER</text>
+        <rect class="node-rect accent" x="20" y="40" width="440" height="80" rx="10"/>
+        <text class="node-title" x="240" y="72">Student Web App</text><text class="node-sub" x="240" y="90">React 18 + TS &middot; SPA route: /</text>
+        <rect class="node-rect accent" x="500" y="40" width="440" height="80" rx="10"/>
+        <text class="node-title" x="720" y="72">Admin Console</text><text class="node-sub" x="720" y="90">same bundle &middot; role-gated route: /admin</text>
+
+        <line class="edge" x1="480" y1="140" x2="480" y2="176" marker-end="url(#arrow-ar)"/>
+        <text class="edge-label" x="500" y="163">HTTPS / JSON &middot; Axios &middot; Sanctum SPA cookie auth</text>
+
+        <!-- band 2: API -->
+        <text class="edge-label" x="20" y="200">API LAYER &mdash; LARAVEL 11</text>
+        <rect class="boundary" x="20" y="210" width="920" height="120" rx="12"/>
+        <g>
+          <rect class="node-rect on-alt" x="36" y="235" width="135" height="70" rx="8"/><text class="node-title" x="103" y="272">Auth</text>
+          <rect class="node-rect on-alt" x="185" y="235" width="135" height="70" rx="8"/><text class="node-title" x="252" y="266">Content</text><text class="node-sub" x="252" y="280">API</text>
+          <rect class="node-rect on-alt" x="334" y="235" width="150" height="70" rx="8"/><text class="node-title" x="409" y="266">Study Sessions</text><text class="node-sub" x="409" y="280">API</text>
+          <rect class="node-rect on-alt" x="498" y="235" width="140" height="70" rx="8"/><text class="node-title" x="568" y="266">Flashcards</text><text class="node-sub" x="568" y="280">API</text>
+          <rect class="node-rect accent" x="652" y="235" width="150" height="70" rx="8"/><text class="node-title" x="727" y="266">AI Practice</text><text class="node-sub" x="727" y="280">API</text>
+          <rect class="node-rect on-alt" x="816" y="235" width="110" height="70" rx="8"/><text class="node-title" x="871" y="266">Admin</text><text class="node-sub" x="871" y="280">API</text>
+        </g>
+
+        <line class="edge" x1="480" y1="330" x2="480" y2="366" marker-end="url(#arrow-ar)"/>
+        <text class="edge-label" x="500" y="353">Eloquent &middot; Form Requests &middot; Policies</text>
+
+        <!-- band 3: supporting services -->
+        <text class="edge-label" x="20" y="390">SUPPORTING SERVICES</text>
+        <rect class="node-rect" x="20" y="400" width="290" height="80" rx="10"/><text class="node-title" x="165" y="432">Queue Worker</text><text class="node-sub" x="165" y="450">Laravel Queue &middot; database driver</text>
+        <rect class="node-rect" x="330" y="400" width="200" height="80" rx="10"/><text class="node-title" x="430" y="432">Cache</text><text class="node-sub" x="430" y="450">Redis</text>
+        <rect class="node-rect" x="550" y="400" width="290" height="80" rx="10"/><text class="node-title" x="695" y="432">File Storage</text><text class="node-sub" x="695" y="450">S3-compatible &middot; notes, audio, video</text>
+
+        <line class="edge" x1="727" y1="305" x2="727" y2="368" marker-end="url(#arrow-ar)"/>
+        <line class="edge" x1="727" y1="368" x2="220" y2="368" marker-end="url(#arrow-ar)"/>
+        <line class="edge" x1="220" y1="368" x2="220" y2="398" marker-end="url(#arrow-ar)"/>
+        <text class="edge-label" x="410" y="382">dispatch: GenerateQuestions job</text>
+
+        <line class="edge dashed warm" x1="310" y1="440" x2="368" y2="440" marker-end="url(#arrow-uc-warm)"/>
+        <rect class="node-rect warm" x="370" y="410" width="200" height="60" rx="8" transform="translate(0,140)"/>
+
+        <!-- external -->
+        <rect class="node-rect warm" x="20" y="560" width="290" height="60" rx="8"/>
+        <text class="node-title" x="165" y="586">LLM API</text><text class="node-sub" x="165" y="602">Claude / OpenAI &mdash; external, queued only</text>
+        <line class="edge dashed warm" x1="165" y1="480" x2="165" y2="558" marker-end="url(#arrow-ar)"/>
+
+        <line class="edge" x1="480" y1="480" x2="480" y2="586" marker-end="url(#arrow-ar)"/>
+        <text class="edge-label" x="500" y="536">reads / writes</text>
+
+        <!-- band 4: data -->
+        <text class="edge-label" x="20" y="612">DATA LAYER</text>
+        <rect class="node-rect accent" x="330" y="588" width="510" height="70" rx="10"/>
+        <text class="node-title" x="585" y="618">MySQL 8</text><text class="node-sub" x="585" y="636">primary relational store &mdash; see Sheet 05</text>
+      </svg>
+      </div>
+      <figcaption>Fig. 4.1 &mdash; The AI Practice API only ever dispatches a job; the queue worker is the sole caller of the external LLM, keeping that latency and failure mode off the request/response cycle.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ============ ERD ============ -->
+  <section id="erd">
+    <span class="sheet-eyebrow">Sheet 05</span>
+    <h2>Data Model (ERD)</h2>
+    <p class="dek">Core entities below; three narrow support tables &mdash; <code class="mono">user_settings</code>, <code class="mono">notifications</code>, <code class="mono">admin_activity_logs</code> &mdash; are listed under the diagram rather than drawn, each a simple 1:1 or 1:many off <code class="mono">users</code>.</p>
+    <figure>
+      <div class="scroll">
+      <svg viewBox="0 0 1000 700" width="1000" role="img" aria-label="Entity relationship diagram: users at the center connecting to study_sessions, quiz_attempts, and user_flashcard_progress; a content catalog chain of subjects, topics, study_materials, flashcard_decks, and flashcards; sounds beneath study_sessions">
+        <defs><marker id="arrow-erd" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="var(--ink-faint)"/></marker></defs>
+
+        <!-- catalog chain -->
+        <rect class="node-rect" x="40" y="40" width="180" height="80" rx="8"/>
+        <text class="card-title" x="130" y="60">subjects</text>
+        <text class="field-pk" x="52" y="76">PK id</text><text class="field-text" x="52" y="90">name</text><text class="field-text" x="52" y="103">track</text>
+
+        <line class="edge" x1="130" y1="120" x2="130" y2="158" marker-end="url(#arrow-erd)"/>
+        <text class="edge-label" x="136" y="145">1 &nbsp; *</text>
+        <rect class="node-rect" x="40" y="160" width="180" height="90" rx="8"/>
+        <text class="card-title" x="130" y="180">topics</text>
+        <text class="field-pk" x="52" y="196">PK id</text><text class="field-text" x="52" y="209">FK subject_id</text><text class="field-text" x="52" y="222">name &middot; order</text>
+
+        <line class="edge" x1="130" y1="250" x2="130" y2="288" marker-end="url(#arrow-erd)"/>
+        <text class="edge-label" x="136" y="275">1 &nbsp; *</text>
+        <rect class="node-rect" x="40" y="290" width="190" height="100" rx="8"/>
+        <text class="card-title" x="135" y="310">study_materials</text>
+        <text class="field-pk" x="52" y="326">PK id</text><text class="field-text" x="52" y="339">FK topic_id</text><text class="field-text" x="52" y="352">type &middot; title &middot; url</text>
+
+        <line class="edge" x1="220" y1="205" x2="278" y2="205" marker-end="url(#arrow-erd)"/>
+        <text class="edge-label" x="228" y="196">1 &nbsp; *</text>
+        <rect class="node-rect" x="280" y="160" width="190" height="80" rx="8"/>
+        <text class="card-title" x="375" y="180">flashcard_decks</text>
+        <text class="field-pk" x="292" y="196">PK id</text><text class="field-text" x="292" y="209">FK topic_id &middot; title</text>
+
+        <line class="edge" x1="375" y1="240" x2="375" y2="278" marker-end="url(#arrow-erd)"/>
+        <text class="edge-label" x="381" y="265">1 &nbsp; *</text>
+        <rect class="node-rect" x="280" y="280" width="190" height="100" rx="8"/>
+        <text class="card-title" x="375" y="300">flashcards</text>
+        <text class="field-pk" x="292" y="316">PK id</text><text class="field-text" x="292" y="329">FK deck_id</text><text class="field-text" x="292" y="342">question &middot; answer</text>
+
+        <!-- users hub -->
+        <rect class="node-rect accent" x="400" y="340" width="200" height="100" rx="8"/>
+        <text class="card-title" x="500" y="360">users</text>
+        <text class="field-pk" x="412" y="376">PK id</text><text class="field-text" x="412" y="389">name &middot; email &middot; role</text>
+        <text class="field-text" x="412" y="402">track &middot; streak_count</text>
+
+        <!-- users -> progress (right) -->
+        <line class="edge accent" x1="600" y1="390" x2="768" y2="350" marker-end="url(#arrow-erd)"/>
+        <text class="edge-label" x="640" y="365">1 &nbsp; *</text>
+        <rect class="node-rect" x="780" y="300" width="200" height="100" rx="8"/>
+        <text class="card-title" x="880" y="320">user_flashcard_progress</text>
+        <text class="field-pk" x="792" y="336">PK id</text><text class="field-text" x="792" y="349">FK user_id, flashcard_id</text><text class="field-text" x="792" y="362">status &middot; next_review_at</text>
+
+        <line class="edge" x1="470" y1="380" x2="780" y2="330" marker-end="url(#arrow-erd)"/>
+        <text class="edge-label" x="560" y="320" transform="rotate(-8 560 320)">1 &nbsp; *</text>
+
+        <!-- users -> study_sessions (below-left) -->
+        <line class="edge accent" x1="450" y1="440" x2="240" y2="538" marker-end="url(#arrow-erd)"/>
+        <text class="edge-label" x="330" y="500">1 &nbsp; *</text>
+        <rect class="node-rect" x="140" y="540" width="200" height="100" rx="8"/>
+        <text class="card-title" x="240" y="560">study_sessions</text>
+        <text class="field-pk" x="152" y="576">PK id</text><text class="field-text" x="152" y="589">FK user_id, sound_id</text><text class="field-text" x="152" y="602">duration &middot; type &middot; started_at</text>
+
+        <line class="edge" x1="240" y1="540" x2="240" y2="478" marker-end="url(#arrow-erd)"/>
+        <text class="edge-label" x="246" y="510">* &nbsp; 1</text>
+        <rect class="node-rect" x="140" y="400" width="180" height="70" rx="8"/>
+        <text class="card-title" x="230" y="420">sounds</text>
+        <text class="field-pk" x="152" y="436">PK id</text><text class="field-text" x="152" y="449">name &middot; category &middot; file_url</text>
+
+        <!-- users -> quiz_attempts (below-right) -->
+        <line class="edge accent" x1="550" y1="440" x2="720" y2="538" marker-end="url(#arrow-erd)"/>
+        <text class="edge-label" x="640" y="500">1 &nbsp; *</text>
+        <rect class="node-rect" x="620" y="540" width="200" height="100" rx="8"/>
+        <text class="card-title" x="720" y="560">quiz_attempts</text>
+        <text class="field-pk" x="632" y="576">PK id</text><text class="field-text" x="632" y="589">FK user_id, topic_id</text><text class="field-text" x="632" y="602">score &middot; source &middot; created_at</text>
+      </svg>
+      </div>
+      <figcaption>Fig. 5.1 &mdash; Solid lines are the structural edges drawn here; a few extra foreign keys (e.g. <code class="mono">quiz_attempts.topic_id</code>) are noted in the field list rather than routed as separate lines, to keep the diagram readable.</figcaption>
+    </figure>
+
+    <div class="table-wrap" style="margin-top:16px;">
+      <table>
+        <thead><tr><th>Support table</th><th>Relationship</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">user_settings</td><td class="mono">1:1 users</td><td>Default session duration, default sound, auto-breaks, notification preferences.</td></tr>
+          <tr><td class="mono">notifications</td><td class="mono">1:* users</td><td>In-app + push notification queue &mdash; admin broadcasts and system nudges (streak at risk, weekly goal reminder).</td></tr>
+          <tr><td class="mono">admin_activity_logs</td><td class="mono">1:* users (admin)</td><td>Audit trail: who published/edited/suspended what, and when.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ ADMIN CONSOLE ============ -->
+  <section id="admin">
+    <span class="sheet-eyebrow">Sheet 06</span>
+    <h2>Admin Console</h2>
+    <p class="dek">Same React app, same API, a role check away. Below is the Overview screen at rest, followed by every admin action and exactly how it lands on the student side.</p>
+
+    <div class="admin-shell">
+      <div class="admin-sidebar">
+        <div class="mini-brand">
+          <svg viewBox="0 0 100 100"><path d="M 73 31 A 30 30 0 1 0 73 69" fill="none" stroke="var(--accent)" stroke-width="12" stroke-linecap="round"/><circle cx="73" cy="31" r="8" fill="var(--warm)"/></svg>
+          <span>Clinova Admin</span>
+        </div>
+        <a class="active" href="#"><span class="ico"></span>Overview</a>
+        <a href="#"><span class="ico"></span>Users</a>
+        <a href="#"><span class="ico"></span>Content Library</a>
+        <a href="#"><span class="ico"></span>Flashcards</a>
+        <a href="#"><span class="ico"></span>AI Question Bank</a>
+        <a href="#"><span class="ico"></span>Sound Library</a>
+        <a href="#"><span class="ico"></span>Analytics</a>
+        <a href="#"><span class="ico"></span>Announcements</a>
+        <a href="#"><span class="ico"></span>Audit Log</a>
+        <a href="#"><span class="ico"></span>Settings</a>
+      </div>
+      <div class="admin-main">
+        <div class="admin-topbar">
+          <span class="admin-search">Search students, decks, topics&hellip;</span>
+          <div class="admin-who"><div class="admin-avatar">ET</div>Edmund &middot; Admin</div>
+        </div>
+        <div class="kpi-row">
+          <div class="kpi"><div class="label">Active students (7d)</div><div class="value">1,284</div><div class="delta">&#9650; 6%</div></div>
+          <div class="kpi"><div class="label">Study hours (7d)</div><div class="value">3,940h</div><div class="delta">&#9650; 11%</div></div>
+          <div class="kpi"><div class="label">Avg. session</div><div class="value">42m</div><div class="delta">&#9650; 2m</div></div>
+          <div class="kpi"><div class="label">New signups</div><div class="value">57</div><div class="delta">&#9650; 12%</div></div>
+        </div>
+        <div class="admin-grid">
+          <div class="panel">
+            <h4>Content awaiting review</h4>
+            <div class="mini-row"><div><div class="t">Postpartum Hemorrhage &mdash; video</div><div class="s">Midwifery &middot; submitted by A. Owusu</div></div><span class="pill rev">In review</span></div>
+            <div class="mini-row"><div><div class="t">Pharmacology Deck 4</div><div class="s">Nursing &middot; flashcards</div></div><span class="pill pub">Published</span></div>
+            <div class="mini-row"><div><div class="t">Newborn Assessment &mdash; notes</div><div class="s">Midwifery &middot; study material</div></div><span class="pill rev">In review</span></div>
+          </div>
+          <div class="panel">
+            <h4>Weekly engagement</h4>
+            <div class="bars">
+              <div class="bar" style="height:40%"></div><div class="bar" style="height:55%"></div><div class="bar" style="height:48%"></div><div class="bar peak" style="height:82%"></div><div class="bar" style="height:60%"></div><div class="bar" style="height:35%"></div><div class="bar" style="height:44%"></div>
+            </div>
+            <div class="bar-days"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrap" style="margin-top:22px;">
+      <table>
+        <thead><tr><th>Admin action</th><th>Where</th><th>Effect on the student dashboard</th></tr></thead>
+        <tbody>
+          <tr><td>Publish study material</td><td class="mono">Content Library</td><td>Appears in Study Library under its track/topic on the student's next fetch &mdash; no deploy needed.</td></tr>
+          <tr><td>Create / edit flashcard deck</td><td class="mono">Flashcards</td><td>New deck listed under Flashcards for every student on that track.</td></tr>
+          <tr><td>Approve AI-generated questions</td><td class="mono">AI Question Bank</td><td>Approved set becomes the cached pool the AI Practice API serves for that topic.</td></tr>
+          <tr><td>Upload ambient sound</td><td class="mono">Sound Library</td><td>New option in the Study-With-Me sound picker.</td></tr>
+          <tr><td>Suspend / reactivate user</td><td class="mono">Users</td><td>Sanctum tokens revoked immediately &mdash; student is logged out on next request.</td></tr>
+          <tr><td>Send announcement</td><td class="mono">Announcements</td><td>Push + in-app notification badge, targeted by track and/or level.</td></tr>
+          <tr><td>Adjust platform defaults</td><td class="mono">Settings</td><td>New signups inherit the updated default session length / sound in Session Settings.</td></tr>
+          <tr><td>View analytics</td><td class="mono">Analytics</td><td>Read-only &mdash; informs content decisions, no write path to the student app.</td></tr>
+          <tr><td>Every action above</td><td class="mono">Audit Log</td><td>Recorded with admin id, target, and timestamp for traceability.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ TECH STACK ============ -->
+  <section id="stack">
+    <span class="sheet-eyebrow">Sheet 07</span>
+    <h2>Technical Stack &amp; Next Steps</h2>
+    <p class="dek">Nothing exotic &mdash; the goal is a stack you can hold in your head six months from now, not the largest possible toolbox.</p>
+
+    <div class="stack-grid">
+      <div class="stack-card">
+        <span class="role">Frontend</span>
+        <h3>React SPA</h3>
+        <p>React 18 + TypeScript on Vite. TanStack Query owns server state (content, decks, sessions); a small Zustand store holds purely client state &mdash; the running timer. Tailwind for styling, React Router with a role guard splitting <code class="mono">/</code> from <code class="mono">/admin/*</code>.</p>
+        <div class="chip-row"><span class="chip">react</span><span class="chip">typescript</span><span class="chip">tanstack-query</span><span class="chip">zustand</span><span class="chip">tailwindcss</span></div>
+      </div>
+      <div class="stack-card">
+        <span class="role">Backend</span>
+        <h3>Laravel API</h3>
+        <p>Laravel 11, Sanctum for SPA cookie auth against one <code class="mono">users</code> table with a <code class="mono">role</code> enum. Form Requests validate, Policies gate every admin endpoint. Laravel Queue (database driver to start) runs AI generation and notification jobs; the scheduler resets weekly goals and computes streaks nightly.</p>
+        <div class="chip-row"><span class="chip">laravel 11</span><span class="chip">sanctum</span><span class="chip">policies</span><span class="chip">queue</span><span class="chip">scheduler</span></div>
+      </div>
+      <div class="stack-card">
+        <span class="role">Data &amp; storage</span>
+        <h3>MySQL 8 + object storage</h3>
+        <p>MySQL is the single source of truth (Sheet 05). Notes/audio/video go to local disk in dev and an S3-compatible bucket in production, referenced by URL from <code class="mono">study_materials</code> &mdash; never stored as blobs in the DB.</p>
+        <div class="chip-row"><span class="chip">mysql 8</span><span class="chip">eloquent</span><span class="chip">s3</span></div>
+      </div>
+      <div class="stack-card">
+        <span class="role">AI Practice</span>
+        <h3>Server-side only</h3>
+        <p>The client never talks to the LLM directly. A dedicated <code class="mono">AiPracticeService</code> is the only caller, invoked from a queued job, with generated sets cached per topic so a quiz start is a cache read, not an API call.</p>
+        <div class="chip-row"><span class="chip">queued job</span><span class="chip">per-topic cache</span><span class="chip">no client key exposure</span></div>
+      </div>
+    </div>
+
+    <h3 style="font-size:1.1rem;margin:28px 0 4px;">Where we start coding</h3>
+    <ol class="next-steps">
+      <li><b>Turn the ERD into migrations</b><span>users, subjects, topics, study_materials, flashcard_decks, flashcards, sounds, study_sessions &mdash; the tables everything else hangs off.</span></li>
+      <li><b>Auth + role scaffolding</b><span>Sanctum SPA auth, the <code class="mono">role</code> enum, and the Policy classes that make <code class="mono">/admin/*</code> mean something on the API side, not just the frontend route.</span></li>
+      <li><b>Ship Study With Me first</b><span>It's the flagship screen in the reference design &mdash; build the timer + sound picker end to end before the rest of the library, so there's a working vertical slice early.</span></li>
+      <li><b>Admin console incrementally</b><span>Overview + Content Library CRUD first (it unblocks everything else needing real data), Users and Analytics after.</span></li>
+      <li><b>AI Practice last</b><span>It's the one component with an external dependency and a cost model &mdash; build it once the cached-content pattern from Study Library already exists to copy.</span></li>
+    </ol>
+  </section>
+
+</div>
+</body>
+</html>

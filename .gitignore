@@ -1,0 +1,36 @@
+# Dependencies
+**/node_modules/
+**/vendor/
+
+# Build output
+**/dist/
+**/build/
+
+# Environment and secrets
+**/.env
+**/.env.*
+!**/.env.example
+
+# Laravel runtime files
+api/storage/*.key
+api/storage/logs/*.log
+api/storage/framework/cache/data/
+api/storage/framework/sessions/
+api/storage/framework/testing/
+api/storage/framework/views/*.php
+api/storage/app/public/
+api/bootstrap/cache/*.php
+!api/bootstrap/cache/.gitignore
+
+# Local databases and generated uploads
+api/database/*.sqlite
+api/database/*.sqlite-*
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.claude/
+.agents/
+.codex/

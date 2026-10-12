@@ -1,0 +1,1096 @@
+{
+    "info": {
+        "_postman_id": "c1in0va-0000-0000-0000-000000000001",
+        "name": "Clinova API (no scripts)",
+        "description": "Every endpoint across all six backend domains (Users, StudyLibrary, Flashcards, SoundLibrary, StudySessions, Admin). Pair with the Clinova - Admin and Clinova - Student environment files. See docs/postman/README.md for setup and a recommended walkthrough order.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://127.0.0.1:8000/api"
+        },
+        {
+            "key": "topic_id",
+            "value": "1"
+        },
+        {
+            "key": "subject_id",
+            "value": "1"
+        },
+        {
+            "key": "material_id",
+            "value": "1"
+        },
+        {
+            "key": "deck_id",
+            "value": "1"
+        },
+        {
+            "key": "flashcard_id",
+            "value": "1"
+        },
+        {
+            "key": "sound_id",
+            "value": "1"
+        },
+        {
+            "key": "study_session_id",
+            "value": "1"
+        },
+        {
+            "key": "user_id",
+            "value": "2"
+        }
+    ],
+    "item": [
+        {
+            "name": "Auth",
+            "description": "Register/login use real session auth, not the collection's Bearer default \u2014 each has auth overridden to None here. Everything else in this collection uses the Bearer token from your active environment.",
+            "item": [
+                {
+                    "name": "Register",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"New Student\",\n  \"email\": \"newstudent@example.com\",\n  \"password\": \"password\",\n  \"password_confirmation\": \"password\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/register",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "register"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Login (via Bearer-token workflow \u2014 see README)",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/login",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "login"
+                            ]
+                        },
+                        "description": "This is the REAL cookie-session endpoint \u2014 it will 500 in Postman unless you do the CSRF-cookie dance described in the README. For day-to-day testing, mint a Bearer token via Tinker instead (also in the README) and skip this request entirely."
+                    }
+                },
+                {
+                    "name": "Current User (/api/user)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/user",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "user"
+                            ]
+                        },
+                        "description": "Good first call to run after setting a token \u2014 confirms the Bearer token in your active environment actually authenticates, and shows you which user you're acting as."
+                    }
+                },
+                {
+                    "name": "Logout",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/logout",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "logout"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Forgot Password",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"test@example.com\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/forgot-password",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "forgot-password"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "StudyLibrary",
+            "item": [
+                {
+                    "name": "List Subjects",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/study-library/subjects",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "study-library",
+                                "subjects"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Subject (admin)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Community Health Nursing\",\n  \"track\": \"nursing\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/study-library/subjects",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "study-library",
+                                "subjects"
+                            ]
+                        },
+                        "description": "Run as the admin environment. On success, auto-saves the new id into {{subject_id}} for the next request."
+                    }
+                },
+                {
+                    "name": "List Topics",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/study-library/topics?subject_id={{subject_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "study-library",
+                                "topics"
+                            ],
+                            "query": [
+                                {
+                                    "key": "subject_id",
+                                    "value": "{{subject_id}}"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Topic (admin)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"subject_id\": {{subject_id}},\n  \"name\": \"Postpartum Hemorrhage\",\n  \"order\": 1\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/study-library/topics",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "study-library",
+                                "topics"
+                            ]
+                        },
+                        "description": "Uses {{subject_id}} from the previous request. Auto-saves the new id into {{topic_id}}."
+                    }
+                },
+                {
+                    "name": "List Materials in a Topic",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/study-library/topics/{{topic_id}}/materials",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "study-library",
+                                "topics",
+                                "{{topic_id}}",
+                                "materials"
+                            ]
+                        },
+                        "description": "Run once as Student (only published materials), then switch the active environment to Admin and run again (drafts included too)."
+                    }
+                },
+                {
+                    "name": "Create Study Material (admin)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"topic_id\": {{topic_id}},\n  \"type\": \"note\",\n  \"title\": \"Managing PPH: First Response\",\n  \"body\": \"Et et sapiente vel...\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/study-library/materials",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "study-library",
+                                "materials"
+                            ]
+                        },
+                        "description": "type must be note|video|audio. A note needs 'body'; video/audio need 'url' instead. Expect 201 (wasRecentlyCreated) and status: draft."
+                    }
+                },
+                {
+                    "name": "Get Single Material",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/study-library/materials/{{material_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "study-library",
+                                "materials",
+                                "{{material_id}}"
+                            ]
+                        },
+                        "description": "As Student: 403 if the material is still draft \u2014 that's StudyMaterialPolicy::view() working, not a bug."
+                    }
+                },
+                {
+                    "name": "Update Material (admin)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"Managing PPH: Updated Title\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/study-library/materials/{{material_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "study-library",
+                                "materials",
+                                "{{material_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Publish Material (admin)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/study-library/materials/{{material_id}}/publish",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "study-library",
+                                "materials",
+                                "{{material_id}}",
+                                "publish"
+                            ]
+                        },
+                        "description": "Flips status to published AND writes an admin_activity_logs row via AdminActionPerformed. Check Admin > Activity Log after running this."
+                    }
+                },
+                {
+                    "name": "Delete Material (admin)",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/study-library/materials/{{material_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "study-library",
+                                "materials",
+                                "{{material_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Flashcards",
+            "item": [
+                {
+                    "name": "List Decks",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/flashcards/decks",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "flashcards",
+                                "decks"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Deck (admin)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"topic_id\": {{topic_id}},\n  \"title\": \"Obstetric Danger Signs\",\n  \"description\": \"Quick recall deck\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/flashcards/decks",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "flashcards",
+                                "decks"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Publish Deck (admin)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/flashcards/decks/{{deck_id}}/publish",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "flashcards",
+                                "decks",
+                                "{{deck_id}}",
+                                "publish"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List Cards in a Deck",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/flashcards/decks/{{deck_id}}/cards",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "flashcards",
+                                "decks",
+                                "{{deck_id}}",
+                                "cards"
+                            ]
+                        },
+                        "description": "As Student against a draft deck: 403. Publish the deck first."
+                    }
+                },
+                {
+                    "name": "Create Card (admin)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"deck_id\": {{deck_id}},\n  \"question\": \"Signs of postpartum hemorrhage?\",\n  \"answer\": \"Blood loss >500mL vaginal, hypotension, tachycardia\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/flashcards/cards",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "flashcards",
+                                "cards"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Due Cards (Student)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/flashcards/due",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "flashcards",
+                                "due"
+                            ]
+                        },
+                        "description": "A card with no progress row is always due. Run this before and after reviewing a card to see it disappear/reappear."
+                    }
+                },
+                {
+                    "name": "Review Card \u2014 quality 5 (Student)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"quality\": 5\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/flashcards/{{flashcard_id}}/review",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "flashcards",
+                                "{{flashcard_id}}",
+                                "review"
+                            ]
+                        },
+                        "description": "SM-2: quality 0-5. First review at quality 5 should return interval_days: 1, ease_factor: 2.6, status: 201 (new progress row created)."
+                    }
+                },
+                {
+                    "name": "Review Card \u2014 quality 1, a failure (Student)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"quality\": 1\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/flashcards/{{flashcard_id}}/review",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "flashcards",
+                                "{{flashcard_id}}",
+                                "review"
+                            ]
+                        },
+                        "description": "Quality < 3 resets interval_days to 1 but leaves ease_factor untouched \u2014 SM-2 doesn't punish ease on a single bad day."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "SoundLibrary",
+            "item": [
+                {
+                    "name": "List Sounds",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/sounds",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "sounds"
+                            ]
+                        },
+                        "description": "As Student, source/license/is_active are absent from the JSON entirely (not null) \u2014 that's the Resource's when()-as-closure pattern."
+                    }
+                },
+                {
+                    "name": "Upload Sound (admin)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Thunderstorm\",\n  \"category\": \"Nature\",\n  \"file_url\": \"https://cdn.example.com/sounds/storm.mp3\",\n  \"source\": \"freesound.org\",\n  \"license\": \"CC0\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/sounds",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "sounds"
+                            ]
+                        },
+                        "description": "Metadata only \u2014 no real file upload endpoint exists yet, file_url just needs to be a valid URL string."
+                    }
+                },
+                {
+                    "name": "Deactivate Sound (admin)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/sounds/{{sound_id}}/deactivate",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "sounds",
+                                "{{sound_id}}",
+                                "deactivate"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Activate Sound (admin)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/sounds/{{sound_id}}/activate",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "sounds",
+                                "{{sound_id}}",
+                                "activate"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "StudySessions",
+            "item": [
+                {
+                    "name": "List My Sessions",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/study-sessions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "study-sessions"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Start Focus Session",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"planned_minutes\": 50,\n  \"sound_id\": {{sound_id}}\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/study-sessions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "study-sessions"
+                            ]
+                        },
+                        "description": "sound_id is optional \u2014 drop it from the body entirely for a session with no ambient sound."
+                    }
+                },
+                {
+                    "name": "Finish Session \u2014 completed (Student)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"actual_minutes\": 50,\n  \"completed\": true\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/study-sessions/{{study_session_id}}/finish",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "study-sessions",
+                                "{{study_session_id}}",
+                                "finish"
+                            ]
+                        },
+                        "description": "completed: true fires FocusSessionCompleted \u2014 call Auth > Current User before and after to watch streak_count change."
+                    }
+                },
+                {
+                    "name": "Finish Session \u2014 exited early (Student)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"actual_minutes\": 8,\n  \"completed\": false\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/study-sessions/{{study_session_id}}/finish",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "study-sessions",
+                                "{{study_session_id}}",
+                                "finish"
+                            ]
+                        },
+                        "description": "Still saves the row (Sheet 03's rule) but does NOT touch the streak \u2014 compare streak_count before/after against the 'completed: true' version."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin",
+            "description": "Every request in this folder needs the Admin environment active \u2014 role:admin is enforced at the route-group level, so a Student token gets 403 on all of these.",
+            "item": [
+                {
+                    "name": "List Students",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/users",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "users"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Suspend User",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/users/{{user_id}}/suspend",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "users",
+                                "{{user_id}}",
+                                "suspend"
+                            ]
+                        },
+                        "description": "{{user_id}} defaults to 2, the seeded Test Student. After running this, that student's token (if you minted one) stops authenticating \u2014 try Auth > Current User with the Student environment active."
+                    }
+                },
+                {
+                    "name": "Reactivate User",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/users/{{user_id}}/reactivate",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "users",
+                                "{{user_id}}",
+                                "reactivate"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Broadcast Announcement",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"New content live\",\n  \"body\": \"Check out the new Postpartum Hemorrhage deck.\",\n  \"track\": \"nursing\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/admin/announcements",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "announcements"
+                            ]
+                        },
+                        "description": "'track' is optional \u2014 drop it to broadcast to every student regardless of track. Never reaches the broadcasting admin's own notifications."
+                    }
+                },
+                {
+                    "name": "Activity Log",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/activity-log",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "activity-log"
+                            ]
+                        },
+                        "description": "Run this after publishing a material/deck or suspending a user \u2014 each should show up here via AdminActionPerformed, with zero manual wiring on the triggering domain's side."
+                    }
+                },
+                {
+                    "name": "Analytics Overview",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/analytics/overview",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "analytics",
+                                "overview"
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}

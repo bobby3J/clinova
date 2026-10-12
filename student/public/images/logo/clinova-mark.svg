@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Clinova logomark">
+  <path d="M 73 31 A 30 30 0 1 0 73 69" fill="none" stroke="#0E7C6B" stroke-width="9" stroke-linecap="round"/>
+  <path d="M 73 69 L 81 69 L 86 58 L 93 78 L 98 66" fill="none" stroke="#0E7C6B" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="73" cy="31" r="6" fill="#B8722A"/>
+</svg>
