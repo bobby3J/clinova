@@ -7,8 +7,20 @@ RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
 COPY . .
 RUN composer dump-autoload --optimize --no-dev
 
-FROM php:8.3-fpm-alpine
+FROM php:8.5-fpm-alpine
 
+# Must match local dev's actual PHP version (8.5.4), not just satisfy
+# composer.json's own "php": "^8.3" constraint — composer.lock resolved
+# several Symfony components (transitive Laravel dependencies, not
+# anything added directly) that require PHP >=8.4.1, since they were
+# locked against this machine's real 8.5 install. A composer.json range
+# describes what *could* work; the actual locked versions are what matters
+# for the runtime image. Confirmed live: 8.3 failed at boot with
+# "Composer detected issues in your platform" from vendor/composer/
+# platform_check.php, which fires on every request via autoload.php, not
+# just at build time — a mismatch here isn't caught by a clean build, only
+# by the app actually trying to run.
+#
 # Extensions actually in use by this app (verified against the local dev
 # PHP install, not a generic "just in case" list) + pcntl, which
 # `queue:work`'s graceful signal handling needs. gd/intl intentionally
