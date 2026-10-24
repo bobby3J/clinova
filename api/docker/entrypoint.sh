@@ -15,6 +15,12 @@ php artisan view:cache
 # running `migrate` on boot can race.
 php artisan migrate --force
 
+# Idempotent — only acts if ADMIN_EMAIL/ADMIN_PASSWORD are set on Render
+# and no user with that email exists yet. The free tier has no Shell
+# access, so this is how the first admin account gets created at all.
+php artisan db:seed --class=RoleSeeder --force
+php artisan app:ensure-admin
+
 php artisan storage:link 2>/dev/null || true
 
 export PORT="${PORT:-8080}"
