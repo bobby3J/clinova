@@ -1,6 +1,6 @@
 # Clinova Student App — Starting Point
 
-Last updated: 2026-10-08 (AI Practice — a genuinely new backend domain, provider-agnostic; every Home tile and nav destination is now real)
+Last updated: 2026-10-21 (Onboarding + Support, §4g — plus a real time-of-day greeting and a forgot/reset-password flow, §4h; both same day)
 
 ## 1) What this project is
 
@@ -345,13 +345,99 @@ behind an interface so the rest of the feature didn't have to wait.
   the reveal-on-refetch behavior including `my_selected_option`/`my_answer_correct`, cross-student
   privacy).
 
+## 4g) Onboarding + Support — the last mockup screen, and a new student <-> admin channel
+
+**Onboarding** (`src/pages/Onboarding/Onboarding.tsx`, `/welcome`) — the mockup's 8th screen,
+deferred by the user's own earlier instruction until "the app is done." A 4-slide carousel (brand
+moment, then Study With Me, AI Practice + Flashcards, and Progress — every slide after the first
+describes a feature that's actually built and working, not aspirational copy), each backed by a
+real illustration (`public/images/onboarding/*.svg`), not a simple line icon — no AI image
+generation was available in this environment, so these are free, MIT-licensed unDraw
+illustrations (sourced via the `undraw-svg` npm package, used one-off to extract four files then
+immediately removed — the app doesn't need the other ~1,880 as a dependency) with each file's one
+designated accent hex swapped to Clinova's brand teal (`#0E7C6B`) via a single `sed` replacement;
+skin tones and neutral grays were identified per-file first and deliberately left untouched so the
+recolor reads as "on-brand," not broken. A **post-signup welcome tour, not a pre-auth gate** — the route lives inside
+`AuthGate` (requires a real session, same as every other screen), and `SignUp.tsx` is the one and
+only place that navigates here, immediately after a successful *registration*; signing in never
+does. (An earlier version of this showed onboarding to any unauthenticated visitor before
+sign-in/sign-up — corrected after the user clarified the intended flow was post-signup, not
+pre-auth; worth knowing if an old build or a stale bundle is still showing the wrong order.)
+
+**No "has this been seen" flag anywhere, deliberately.** An even earlier version used a
+`localStorage` marker (`lib/onboarding.ts`, since deleted) to stop a browser-back replay of the
+carousel. That flag turned out to cause real breakage, not prevent it: once set — including by the
+very first pre-auth version of this screen, which marked it on every `/signin` visit — it silently
+suppressed onboarding for every *subsequent* genuinely-new signup sharing that same browser, which
+is exactly what happened during testing (a fresh signup showed nothing, twice, before this was
+traced back to a stale flag). `/welcome` has exactly one entry point in the whole app —
+`SignUp.tsx`'s post-registration `navigate()` — so there's no real risk of unwanted replay through
+normal navigation; the redundancy of occasionally seeing the carousel twice via browser-back is a
+much smaller problem than silently hiding it from a real new user. Uses `GradientBackdrop` — the
+same animated multicolor backdrop component Study With Me's setup/active screens already use, not
+a new visual system for this one screen.
+
+**Support** (`src/pages/Support/{Support,NewTicket,TicketDetail}.tsx`, `/support`,
+`/support/new`, `/support/:id`) — the first genuinely new *backend* domain since AI Practice. A
+student reports an issue (subject + category + message), an admin replies from the admin console,
+and the student sees the reply — both as a chat-bubble thread at `/support/:id` and as a real
+notification (reusing `NotificationBell.tsx`/`GET /notifications` exactly as-is; the only change
+there was `NotificationController` projecting an optional `support_ticket_id` so a tapped
+notification can deep-link straight into the thread). Full backend design —
+schema, the two-controller student/admin split, the fillable-status and DB-default gotchas caught
+building it — is in `api/docs/ARCHITECTURE.md`'s own Support section, not duplicated here.
+Reachable from `Profile.tsx`'s new "Help & Support" link, alongside the existing "Session
+Settings" one.
+
+Covered by `api/tests/Feature/Support/{SupportTicketTest,AdminSupportTicketTest}.php` — 17 tests:
+opening a ticket, validation, ownership (a student can't view/reply to another student's ticket),
+admin-sees-everything + status filtering, the notify-on-admin-reply/don't-notify-on-student-reply
+split (both directions individually tested, not just the happy path), status transitions, and the
+admin-only `student_name` field being genuinely absent from the student's own view of their ticket.
+
+## 4h) Time-of-day greeting, and a forgot/reset-password flow that didn't exist on either frontend
+
+**Home.tsx's greeting** was hardcoded `"Good morning"` text, unconditionally, all day — flagged by
+the user (based in Ghana, GMT/UTC+0 year-round). Fixed with a plain client-side check against
+`new Date().getHours()` — the *browser's* local time, not the server's or any hardcoded timezone,
+so it's correct for a student anywhere without per-country logic: morning before 12, afternoon
+before 17, evening after.
+
+**Forgot/reset password** — the backend half of this (`POST /forgot-password`,
+`POST /reset-password`, standard Laravel Breeze-shape controllers) already existed and was already
+tested, but **no frontend, admin or student, had ever had a page for either one.** Worse: the
+email-link builder itself was quietly broken — `config('app.frontend_url')` was read by
+`AppServiceProvider` but never actually registered in `config/app.php`, so it resolved to `null`
+and every reset email ever sent contained a bare path with no host at all. Full story (the config
+fix, and making the link role-aware so a student's reset points at this app and an admin's points
+at the console) is in `api/docs/ARCHITECTURE.md`'s own "Password reset" section — not duplicated
+here.
+
+Student-side, now real: `src/pages/ForgotPassword/ForgotPassword.tsx` (`/forgot-password` — email
+in, one neutral "if an account exists..." message out, regardless of whether it actually does, by
+design) and `src/pages/ResetPassword/ResetPassword.tsx` (`/password-reset/:token` — matches the
+backend's link shape exactly, reads `email` from the query string), plus a "Forgot password?" link
+added to `SignIn.tsx`. `lib/auth.ts` gained `forgotPassword()`/`resetPassword()` alongside the
+existing `login()`/`register()`.
+
+Verified live, not just build-checked: triggered a real `Password::sendResetLink()` via `tinker`
+for both a seeded student and a seeded admin, then read the actual generated link out of the
+log-driver mailer (`MAIL_MAILER=log` locally) — confirmed the student's link points at
+`127.0.0.1:5174` and the admin's at `localhost:5173`, with a real token and the right email in
+each. A new backend test (`PasswordResetTest::test_reset_link_points_at_the_students_own_app_not_admins`)
+renders the notification for real instead of `Notification::fake()`-ing it away, specifically so
+this exact bug can't come back silently.
+
+**Known gap, not closed by this pass**: the admin console still has no page at this same
+`/password-reset/:token` path — its reset emails are now generated correctly but have nowhere to
+land yet.
+
 ## 5) Verified
 
-- `php artisan test` — 146/146 (up from 135; `AiPractice`'s two test files added 11 tests this
-  round — the only backend-touching pass since Session Settings, everything in between consumed
-  APIs that already existed).
+- `php artisan test` — 164/164 (up from 146; Support's two test files added 17 tests this round —
+  the first backend-touching pass since AI Practice).
 - `npm run build` — compiles clean after every change this pass, including the breakpoint fix, the
-  full shell port, and every screen added since.
+  full shell port, and every screen added since, through Onboarding + Support.
 - Confirmed the `lg:` breakpoint fix actually works, not just that the build succeeds: grepped the
   compiled CSS for `1024px` media queries before (zero) and after (present) the `@theme` fix.
 - Confirmed the `Toggle.tsx` positioning fix the same way: grepped the compiled CSS for `left:2px`/
@@ -383,6 +469,14 @@ behind an interface so the rest of the feature didn't have to wait.
 - **Still not done**: a real browser click-through. No browser automation is available in this
   session — visual fidelity against the mockup (and now, against admin's actual desktop layout)
   is a best-effort implementation, not something screenshot-diffed. Worth a manual look.
+- **Support/Onboarding specifically**: backend verified via the full `php artisan test` run above
+  (real HTTP requests through Laravel's own test client, including the notification-firing and
+  ownership checks) and both frontend builds compile clean. A raw-curl live pass (outside the test
+  framework) was attempted and hit a Sanctum stateful-auth header quirk specific to the manual curl
+  script itself (missing/mismatched `Origin` header) — not a product bug, not pursued further given
+  the test suite already exercises the real code paths and the user's own browser-based logins have
+  worked throughout this project. Still: this feature specifically has not been clicked through in
+  a real browser, same gap as everything else in this section.
 
 ## 6) Best place to resume
 
@@ -393,10 +487,11 @@ behind an interface so the rest of the feature didn't have to wait.
 2. ~~Session Settings~~ / ~~Study Progress~~ / ~~Flashcards~~ / ~~SessionSetup reads saved
    defaults~~ / ~~Study Library~~ / ~~AI Practice~~ — all done (§4c–§4f). **Every Home tile and nav
    destination is real now.** There is no remaining "Coming soon" placeholder anywhere in this app.
-3. **A real LLM provider for AI Practice**, whenever that decision is made — write a new class
-   implementing `QuestionGenerator` and change the one `bind()` line in `AppServiceProvider`. See
-   `api/docs/ARCHITECTURE.md`'s AiPractice section for the full reasoning and what else that'll need
-   (rate-limiting specifically, given real per-request cost the template generator doesn't have).
+3. ~~A real LLM provider for AI Practice~~ — done. `GeminiQuestionGenerator` is the bound
+   implementation as of 2026-10-08 (Google's free-tier Gemini API), falling back to
+   `TemplateQuestionGenerator` automatically on any failure. See `api/docs/ARCHITECTURE.md`'s
+   AiPractice section. Rate-limiting `POST /ai-practice/sets` is still the one piece explicitly not
+   done yet, flagged there as needed once this sees real traffic.
 4. **Flashcards is pull-only, not push** — confirmed during the Flashcards pass: publishing a deck in
    the admin console makes its cards show up in a student's `GET /flashcards/due` immediately (no
    delay, no sync step — a freshly-published card has no review history for anyone, so it's due for
@@ -405,7 +500,9 @@ behind an interface so the rest of the feature didn't have to wait.
    already has for Announcements), that's a genuinely separate feature — deck-publish doesn't fire
    the same `AdminActionPerformed` path announcements use today. The same gap now also applies to AI
    Practice-worthy new content, for the same reason.
-5. **The onboarding/marketing screen** (mockup's 8th screen) — explicitly deferred until the rest of
-   the app is further along (user's own call, not a technical blocker). Now that every tile is real,
-   this and the manual visual pass (#1) are the two genuinely remaining items from the original
-   mockup's scope.
+5. ~~The onboarding/marketing screen~~ (mockup's 8th screen) — done, §4g. The manual visual pass
+   (#1) is now the one genuinely remaining item from the original mockup's scope.
+6. **Support's "lecturer/admin content doesn't push-notify" cousin gap, from item #4, is now
+   half-closed** — a support reply *does* push-notify (that's the whole feature), proving the
+   pattern works end to end. Flashcard/AI-Practice-publish notifications are still the one
+   remaining instance of that gap, unchanged by this round.

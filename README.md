@@ -101,6 +101,7 @@ npm run build
 
 - Architecture: [api/docs/ARCHITECTURE.md](api/docs/ARCHITECTURE.md)
 - API reference: [api/docs/API_REFERENCE.md](api/docs/API_REFERENCE.md)
+- Deployment (free, no card — Render + Aiven + Backblaze B2 + Netlify): [api/docs/DEPLOYMENT.md](api/docs/DEPLOYMENT.md)
 - Postman collections and environments: [api/docs/postman](api/docs/postman)
 
 The React apps use Sanctum's cookie-session SPA flow. Bearer tokens are useful for Postman and scripted API checks, but they are not the browser login flow.

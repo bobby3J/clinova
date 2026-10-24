@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router";
+import { Link, useLocation } from "react-router";
 import { getNotifications, markAllNotificationsRead } from "../lib/notifications";
 import { BellIcon } from "./icons";
 import type { AppNotification } from "../types/notifications";
@@ -83,12 +83,25 @@ export default function NotificationBell() {
             </p>
           ) : (
             <ul className="flex flex-col gap-0.5">
-              {notifications.map((n) => (
-                <li key={n.id} className="rounded-lg px-3 py-2 hover:bg-gray-50">
-                  <p className="text-sm font-medium text-gray-800">{n.title}</p>
-                  <p className="mt-0.5 text-xs text-gray-500">{n.body}</p>
-                </li>
-              ))}
+              {notifications.map((n) => {
+                const content = (
+                  <>
+                    <p className="text-sm font-medium text-gray-800">{n.title}</p>
+                    <p className="mt-0.5 text-xs text-gray-500">{n.body}</p>
+                  </>
+                );
+                return (
+                  <li key={n.id} className="rounded-lg hover:bg-gray-50">
+                    {n.support_ticket_id ? (
+                      <Link to={`/support/${n.support_ticket_id}`} className="block px-3 py-2">
+                        {content}
+                      </Link>
+                    ) : (
+                      <div className="px-3 py-2">{content}</div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

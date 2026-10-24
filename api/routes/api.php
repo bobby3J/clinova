@@ -12,6 +12,7 @@ require base_path('app/Domain/SoundLibrary/routes.php');
 require base_path('app/Domain/StudySessions/routes.php');
 require base_path('app/Domain/Admin/routes.php');
 require base_path('app/Domain/AiPractice/routes.php');
+require base_path('app/Domain/Support/routes.php');
 
 Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
     // 'roles' is added explicitly — the raw User model doesn't serialize

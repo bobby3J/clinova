@@ -16,7 +16,11 @@ class SoundResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'category' => $this->category,
-            'file_url' => $this->file_url,
+            // Resolved per-request, not read straight off the column —
+            // see Sound::resolvedUrl()'s docblock. For an uploaded file
+            // this is a freshly-signed temporary URL when the backing
+            // disk is 's3', not a stored, potentially-stale value.
+            'file_url' => $this->resolvedUrl(),
             // Not a provenance field (unlike source/license/is_active below) —
             // every caller gets this, so the student sound picker can show a
             // "New" badge on recently-added sounds.

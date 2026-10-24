@@ -1,6 +1,6 @@
 # Clinova Admin — Starting Point
 
-Last updated: 2026-10-06 (lecturer role — a second, scoped-down console role with its own role-aware auth gate/nav, a new Lecturers management page, and exam tips as a new StudyMaterial type)
+Last updated: 2026-10-21 (Support — a new admin-only page for replying to and resolving student-reported tickets, the admin side of a new student <-> admin backend domain; see api/docs/ARCHITECTURE.md's own Support section for the full design)
 
 ## 1) What this project is
 
@@ -31,14 +31,24 @@ Defined in [`src/App.tsx`](./src/App.tsx):
   - Admin + lecturer, full parity: `/study-library` -> `StudyLibrary`, `/flashcards` -> `Flashcards`,
     `/settings` -> `Settings`, `/profile` -> `Profile`
   - Admin-only (wrapped in `RequireRole roles={["admin"]}` — see §2a): `/` -> `Dashboard/Home.tsx`,
-    `/sounds` -> `SoundLibrary`, `/users` -> `Users`, `/lecturers` -> `Lecturers` (new),
-    `/announcements` -> `Announcements`, `/activity-log` -> `ActivityLog`
+    `/sounds` -> `SoundLibrary`, `/users` -> `Users`, `/lecturers` -> `Lecturers`,
+    `/announcements` -> `Announcements`, `/support` -> `Support` (new), `/support/:id` ->
+    `Support/TicketDetail` (new), `/activity-log` -> `ActivityLog`
 - `*` -> `NotFound`
 
 **Every page in the route map is fully functional** — `Profile`, `SignIn`, `Dashboard/Home.tsx`,
 `StudyLibrary`, `Flashcards`, `SoundLibrary`, `Users`, `Lecturers`, `ActivityLog`, `Announcements`,
-and `Settings`. No `PlaceholderPage` usages remain anywhere in `src/pages`. See below for what each
-one does and the patterns worth reusing from it.
+`Support`, and `Settings`. No `PlaceholderPage` usages remain anywhere in `src/pages`. See below for
+what each one does and the patterns worth reusing from it.
+
+### Support (`/support`, `/support/:id`) — reply to and resolve student tickets
+
+Added 2026-10-21. Every student's support ticket, filterable by status (`src/pages/Support/Support.tsx`
+— same filter-pill + paginated-table pattern `Users.tsx` already established), with a thread view
+at `/support/:id` (`Support/TicketDetail.tsx`) to reply (notifies the student immediately — see
+`api/docs/ARCHITECTURE.md`) and move a ticket through open -> in_progress -> resolved. No new UI
+pattern introduced — reuses `Badge`, the same table/pagination shape, same dark-mode classes
+throughout as every other admin list page.
 
 ### 2a) The lecturer role — the first fork of this app's permission model
 

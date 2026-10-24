@@ -15,6 +15,8 @@ import Users from "./pages/Users/Users";
 import Lecturers from "./pages/Lecturers/Lecturers";
 import Announcements from "./pages/Announcements/Announcements";
 import ActivityLog from "./pages/ActivityLog/ActivityLog";
+import Support from "./pages/Support/Support";
+import SupportTicketDetail from "./pages/Support/TicketDetail";
 import Settings from "./pages/Settings/Settings";
 import Profile from "./pages/Profile/Profile";
 
@@ -48,6 +50,8 @@ export default function App() {
                 <Route path="/lecturers" element={<Lecturers />} />
                 <Route path="/announcements" element={<Announcements />} />
                 <Route path="/activity-log" element={<ActivityLog />} />
+                <Route path="/support" element={<Support />} />
+                <Route path="/support/:id" element={<SupportTicketDetail />} />
               </Route>
             </Route>
           </Route>

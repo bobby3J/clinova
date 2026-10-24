@@ -52,6 +52,50 @@ export async function login(email: string, password: string): Promise<void> {
   }
 }
 
+/**
+ * POST /forgot-password — always resolves the same way whether or not the
+ * email actually belongs to an account (Laravel's Password::sendResetLink
+ * returns the same "reset link sent" status either way, by design, so a
+ * malicious caller can't use this to discover which emails are
+ * registered). The caller should show one neutral "check your email"
+ * message regardless, not branch on success/failure.
+ */
+export async function forgotPassword(email: string): Promise<void> {
+  await ensureCsrfCookie();
+  await apiPost<void>("/forgot-password", { email });
+}
+
+/**
+ * POST /reset-password — token + email come from the link in the actual
+ * email (AppServiceProvider::boot()'s ResetPassword::createUrlUsing(),
+ * now role-aware so a student's link lands here and not on admin's app).
+ * A 422 here almost always means the token's expired or was already
+ * used — same ApiError.errors.email convention login() already collapses
+ * into a single thrown Error, since there's only ever one meaningful
+ * field-level message to show.
+ */
+export async function resetPassword(
+  token: string,
+  email: string,
+  password: string,
+  passwordConfirmation: string,
+): Promise<void> {
+  await ensureCsrfCookie();
+  try {
+    await apiPost<void>("/reset-password", {
+      token,
+      email,
+      password,
+      password_confirmation: passwordConfirmation,
+    });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 422) {
+      throw new Error(error.errors?.email?.[0] ?? error.message);
+    }
+    throw error;
+  }
+}
+
 export async function logout(): Promise<void> {
   await apiPost<void>("/logout");
 }

@@ -123,4 +123,24 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Frontend URLs — one per app, for building links in emails
+    |--------------------------------------------------------------------------
+    |
+    | Two separate SPAs share this one API (admin console + student app), so
+    | a single "the frontend" URL isn't enough — AppServiceProvider's
+    | password-reset link builder picks between these based on the
+    | recipient's role. FRONTEND_URL already existed (admin's URL, read by
+    | config/cors.php as its fallback) but was never actually registered
+    | here under config('app.*') — config('app.frontend_url') silently
+    | resolved to null, so every password-reset email ever sent contained a
+    | bare path with no host at all until this was added.
+    |
+    */
+
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
+
+    'student_frontend_url' => env('STUDENT_FRONTEND_URL', 'http://127.0.0.1:5174'),
+
 ];

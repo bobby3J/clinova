@@ -1,9 +1,6 @@
 # Clinova API Reference — for frontend integration
 
-Every endpoint across all six built domains, with exact request/response shapes pulled directly from the current Form Requests and Resources (not from memory) on 2026-10-02. If this doc and the code ever disagree, the code wins — but they shouldn't, since nothing here is guessed.
-
-
-`AiPractice` isn't in this doc — that domain doesn't exist yet.
+Every endpoint across all built domains, with exact request/response shapes pulled directly from the current Form Requests and Resources (not from memory) — originally written 2026-10-02, kept current since (most recently: AiPractice 2026-10-08, Support 2026-10-21). If this doc and the code ever disagree, the code wins — but they shouldn't, since nothing here is guessed.
 
 ## 1. Base URL
 
@@ -86,6 +83,7 @@ No pagination exists anywhere yet — every index endpoint returns its full resu
 | `MaterialType` | `note`, `video`, `audio`, `tip` (added 2026-10-06 — lecturer-authored exam tips; text-based like `note`, not URL-based) |
 | `ProgressStatus` | `new`, `learning`, `mastered` |
 | `SessionType` | `focus`, `break` (every session created via the API is currently always `focus`) |
+| `TicketStatus` | `open`, `in_progress`, `resolved` (added 2026-10-21 — Support domain) |
 
 ## 5. TypeScript types
 
@@ -171,7 +169,12 @@ export interface Sound {
   id: number;
   name: string;
   category: string;
+  // Resolved fresh on every response (Sound::resolvedUrl()), never read
+  // from a stored column directly — a presigned, time-limited link for an
+  // uploaded file on the 's3' disk, a stable external link for a pasted
+  // URL. Don't cache this client-side past the current page load.
   file_url: string;
+  created_at: string;       // used client-side for the "New" badge on recently-added sounds
   source?: string | null;   // admin only
   license?: string | null;  // admin only
   is_active?: boolean;      // admin only
@@ -199,6 +202,9 @@ export interface AppNotification {
   id: string;
   title: string | null;
   body: string | null;
+  // Present only on a support-reply notification; null on every other
+  // kind (e.g. an announcement), which has nowhere to deep-link to.
+  support_ticket_id: number | null;
   read_at: string | null;
   created_at: string;
 }
@@ -228,6 +234,25 @@ export interface AiPracticeAnswer {
   is_correct: boolean;
   correct_option: number;
   explanation: string | null;
+}
+
+export interface TicketMessage {
+  id: number;
+  body: string;
+  author_name: string;
+  is_admin: boolean;             // drives which side of the chat-bubble UI this renders on
+  created_at: string;
+}
+
+export interface SupportTicket {
+  id: number;
+  subject: string;
+  category: string | null;
+  status: TicketStatus;
+  student_name?: string;         // present only on the admin-facing endpoints — see §6 Support
+  created_at: string;
+  updated_at: string;
+  messages: TicketMessage[];     // absent on the list endpoints, present only on a single-ticket GET
 }
 
 export interface AdminUser {
@@ -290,12 +315,12 @@ export interface ApiPaginatedResponse<T> {
 | POST | `/login` | guest only | Session auth — see §2 |
 | POST | `/logout` | authenticated | |
 | GET | `/user` | authenticated | Returns the raw `User` model, not a Resource — slightly different shape than other endpoints, includes every column |
-| POST | `/forgot-password` | guest only | |
-| POST | `/reset-password` | guest only | |
+| POST | `/forgot-password` | guest only | `{ "email": "string, required, email" }` → `{ "status": string }`. Always resolves the same way whether or not the email has an account — Laravel's own design, so this can't be used to probe which emails are registered. Until 2026-10-21 the backend worked but no frontend had a page calling it (see below) |
+| POST | `/reset-password` | guest only | `{ "token": "string, required", "email": "string, required, email", "password": "string, required, confirmed" }` → `{ "status": string }`. `token`/`email` come from the link in the actual reset email, built by `AppServiceProvider::boot()`'s `ResetPassword::createUrlUsing()` — **role-aware as of 2026-10-21**: a student's link points at `config('app.student_frontend_url')` (`/password-reset/{token}?email=...`), an admin/lecturer's at `config('app.frontend_url')`. Before that fix, `frontend_url` was never registered in `config/app.php` at all, so `config('app.frontend_url')` silently resolved to `null` and every reset email ever sent contained a bare path with no host — confirmed by reading the literal generated link out of the log-driver mailer, not just by inspecting the code. The student app has pages for both of these (`/forgot-password`, `/password-reset/:token`) as of the same date; **the admin console still doesn't** — its reset link is generated correctly but has nowhere to land yet |
 | POST | `/email/verification-notification` | authenticated | Resends the verification email |
 | GET | `/verify-email/{id}/{hash}` | authenticated, signed URL | Not something you call directly — it's the link inside the verification email |
 | PUT | `/user/password` | authenticated | Change your own password — `current_password`/`password`/`password_confirmation`. Was missing from this doc until 2026-10-06 despite existing since the admin Settings pass; added while touching this section for the notifications rows below |
-| GET | `/notifications` | authenticated | `{ "data": [{ "id": string, "title": string\|null, "body": string\|null, "read_at": string\|null, "created_at": string }], "meta": { "unread_count": number } }` — the caller's own rows only, newest first, capped at 50. Reads Laravel's built-in notifications table (no new table); today the only writer is `BroadcastAnnouncementAction` |
+| GET | `/notifications` | authenticated | `{ "data": [{ "id": string, "title": string\|null, "body": string\|null, "support_ticket_id": number\|null, "read_at": string\|null, "created_at": string }], "meta": { "unread_count": number } }` — the caller's own rows only, newest first, capped at 50. Reads Laravel's built-in notifications table (no new table); writers are `BroadcastAnnouncementAction` and (since 2026-10-21) `ReplyToSupportTicketAction` when an admin replies — `support_ticket_id` is only ever non-null on the latter, letting the frontend deep-link straight into that ticket's thread |
 | POST | `/notifications/mark-all-read` | authenticated | `204` — marks every unread notification read in one query. No per-notification read endpoint exists (no per-item UI to back it yet) |
 | GET | `/user/settings` | authenticated | `{ "data": { "default_duration_minutes": number, "default_sound_id": number\|null, "auto_breaks": boolean, "notifications_enabled": boolean } }` — lazily creates a defaults row on first call (`default_duration_minutes: 25, auto_breaks: true, notifications_enabled: true`) if one doesn't exist yet. Always `200`, even on that first lazy-create — not `201` |
 | PUT | `/user/settings` | authenticated | Same shape as GET. Partial update — every field `sometimes` |
@@ -440,16 +465,23 @@ All routes under `/sounds`, all require authentication.
 |---|---|---|---|
 | GET | `/` | any | `ApiListResponse<Sound>` — students see active only, and never see `source`/`license`/`is_active` |
 | POST | `/` | admin | `ApiResponse<Sound>` |
+| PATCH | `/{sound}` | admin | `ApiResponse<Sound>` — edit metadata and/or replace the audio (upload or paste); was missing from this table entirely until 2026-10-23 despite existing since the original SoundLibrary pass |
 | PATCH | `/{sound}/deactivate` | admin | `ApiResponse<Sound>` |
 | PATCH | `/{sound}/activate` | admin | `ApiResponse<Sound>` |
 
-**POST `/`**
+**POST `/`** — multipart form, exactly one of `file_url` / `audio_file`:
 ```json
 { "name": "string, required, max:255", "category": "string, required, max:100",
-  "file_url": "required, valid URL, max:2048",
+  "file_url": "required_without:audio_file, nullable, valid URL, max:2048",
+  "audio_file": "required_without:file_url, nullable, file, mimes:mp3,wav,ogg,m4a,aac, max:20480 (KB)",
   "source": "string, optional, max:255", "license": "string, optional, max:100" }
 ```
-No real file-upload endpoint exists — `file_url` must already point somewhere real. New sounds are always `is_active: true`.
+A pasted `file_url` is stored and returned as-is. An uploaded `audio_file` is stored on
+`config('filesystems.sounds_disk')` and its *path* kept internally (`Sound::file_path`, never
+returned directly) — the `file_url` the response actually shows is resolved fresh on every call
+(`Sound::resolvedUrl()`), a presigned temporary link when the backing disk is `s3`. New sounds are
+always `is_active: true`. Same shape for `PATCH /{sound}` (admin, update — not listed as its own
+row above since it reuses this same request shape, `sometimes` on every field).
 
 ---
 
@@ -506,6 +538,32 @@ A question's `correct_option`/`explanation`/`my_selected_option`/`my_answer_corr
 
 ---
 
+### Support
+
+Routes under `/support`, all require authentication — the student-facing half of this domain. The admin-facing half (browse/reply-to/resolve *any* ticket) lives under `/admin/support`, listed in the Admin section below, since it's an Admin-domain concern the same way `/admin/users` is, even though both halves drive the same underlying `SupportTicket` model.
+
+| Method | Path | Returns |
+|---|---|---|
+| GET | `/tickets` | `ApiListResponse<SupportTicket>` — the caller's own tickets, newest first, unpaginated (same "one student's own rows" shape as `/ai-practice/sets`). `messages` absent — this is a summary list, not the full thread |
+| POST | `/tickets` | `ApiResponse<SupportTicket>` (201) — opens a ticket and writes its first message in one step; `messages` has exactly one entry |
+| GET | `/tickets/{ticket}` | `ApiResponse<SupportTicket>` — includes the full `messages` thread. 403 if it isn't the caller's own ticket |
+| POST | `/tickets/{ticket}/messages` | `ApiResponse<TicketMessage>` (201) — reply to the thread. 403 if it isn't the caller's own ticket |
+
+**POST `/tickets`**
+```json
+{ "subject": "string, required, max:255",
+  "category": "string, optional, max:100 — frontend suggests bug/question/feedback/other but nothing server-side enforces that list",
+  "message": "string, required, max:5000" }
+```
+
+**POST `/tickets/{id}/messages`**
+```json
+{ "message": "string, required, max:5000" }
+```
+A student replying to their own ticket does **not** trigger a notification (nothing needs telling someone about their own message) — only an admin's reply does, via `SupportTicketReplyNotification` landing in the same `GET /notifications` feed §6 Auth documents, with `support_ticket_id` set so the frontend can deep-link straight into the thread.
+
+---
+
 ### Admin
 
 All routes under `/admin`, require authentication **and** the `admin` role (strictly — unlike StudyLibrary/Flashcards, nothing here widens to `lecturer`) — a student *or lecturer* token gets `403` on every single one of these, enforced at the route level before any controller runs. See `LecturerBoundaryTest.php` for the regression coverage proving that holds.
@@ -523,6 +581,10 @@ All routes under `/admin`, require authentication **and** the `admin` role (stri
 | GET | `/activity-log?page=&per_page=` | `ApiPaginatedResponse<AdminActivityLog>` — paginated as of 2026-10-05; default 20/page, `per_page` capped at 100 |
 | GET | `/analytics/overview` | `{ "data": { "active_students_7d": number, "study_hours_7d": number, "avg_session_minutes": number, "new_signups_7d": number } }` |
 | GET | `/analytics/study-activity?days=` | `{ "data": [{ "date": "YYYY-MM-DD", "minutes": number, "sessions": number }, ...] }` — one entry per day, oldest first, zero-filled. `days` defaults to 30, capped at 90 |
+| GET | `/support/tickets?status=&page=&per_page=` | `ApiPaginatedResponse<SupportTicket>` — every student's tickets, not just one. `status` optional (`open`/`in_progress`/`resolved`), omit for all. Same pagination convention as `/users` |
+| GET | `/support/tickets/{ticket}` | `ApiResponse<SupportTicket>` — includes the full `messages` thread, and `student_name` (absent on the student-facing endpoint's own response — see Support section above) |
+| POST | `/support/tickets/{ticket}/messages` | `ApiResponse<TicketMessage>` (201) — an admin's reply. Triggers `SupportTicketReplyNotification` to the student unconditionally (no "every student's ticket" ownership check here — any admin can reply to any ticket, see `ARCHITECTURE.md`'s Support section) |
+| PATCH | `/support/tickets/{ticket}/status` | `ApiResponse<SupportTicket>` — `{ "status": "open \| in_progress \| resolved" }`. Admin-only; does **not** notify the student (see that Action's own docblock for why) |
 
 **POST `/lecturers`**
 ```json

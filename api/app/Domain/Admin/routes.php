@@ -4,6 +4,7 @@ use App\Domain\Admin\Http\Controllers\ActivityLogController;
 use App\Domain\Admin\Http\Controllers\AnalyticsController;
 use App\Domain\Admin\Http\Controllers\AnnouncementController;
 use App\Domain\Admin\Http\Controllers\LecturerManagementController;
+use App\Domain\Admin\Http\Controllers\SupportTicketController;
 use App\Domain\Admin\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Route;
 
@@ -29,4 +30,13 @@ Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(functi
 
     Route::get('/analytics/overview', [AnalyticsController::class, 'overview']);
     Route::get('/analytics/study-activity', [AnalyticsController::class, 'studyActivity']);
+
+    // Every student's tickets, not just one — the student-facing half of
+    // this same feature (own tickets only) is Support/routes.php,
+    // deliberately a separate file even though both drive the same
+    // SupportTicket model/Actions. See that controller's docblock.
+    Route::get('/support/tickets', [SupportTicketController::class, 'index']);
+    Route::get('/support/tickets/{ticket}', [SupportTicketController::class, 'show']);
+    Route::post('/support/tickets/{ticket}/messages', [SupportTicketController::class, 'replyMessage']);
+    Route::patch('/support/tickets/{ticket}/status', [SupportTicketController::class, 'updateStatus']);
 });

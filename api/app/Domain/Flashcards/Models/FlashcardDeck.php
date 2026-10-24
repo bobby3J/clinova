@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 // status is fillable so PublishFlashcardDeckAction's update() call actually
 // persists — same reasoning as StudyMaterial: StoreFlashcardDeckRequest
 // never validates 'status', so client input can't reach it regardless.
+
 #[Fillable(['topic_id', 'created_by', 'title', 'description', 'status'])]
 #[UseFactory(FlashcardDeckFactory::class)]
 

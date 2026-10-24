@@ -270,6 +270,92 @@ traffic: rate-limiting (Laravel's `throttle` middleware) on `POST /ai-practice/s
 non-fallback call now has real per-request cost and a shared free-tier rate limit across all
 students — not enforced yet, noted here so it isn't forgotten.
 
+## Support — a student <-> admin channel, split across two controllers on purpose
+
+Added 2026-10-21 alongside the onboarding screen (see student app's `PROJECT_STARTING_POINT.md`
+for that half — purely a frontend addition, no backend involved). A student opens a ticket with an
+initial message; any admin can reply or move it through `open -> in_progress -> resolved`; an
+admin's reply notifies the student through the same notifications pipeline Announcements already
+uses.
+
+**Why two controllers for one feature.** `app/Domain/Support/Http/Controllers/SupportTicketController.php`
+(student-facing, routed under `/support`) only ever touches the caller's *own* tickets, enforced by
+`SupportTicketPolicy`. `app/Domain/Admin/Http/Controllers/SupportTicketController.php` (admin-facing,
+routed under `/admin/support`, same admin-only middleware group as `/admin/users`) touches *any*
+ticket. Same split `StudyMaterialController` (student-facing) and the rest of the Admin domain's
+controllers already establish for other features — "which tickets can this caller see" is a
+different question from "what is a ticket," and the two controllers both drive the same
+`SupportTicket`/`SupportTicketMessage` models and `Actions` rather than duplicating that logic.
+
+**No "assigned admin" concept.** Any admin can reply to or resolve any student's ticket — same
+openness StudyLibrary's admin endpoints already have, not role-partitioned by which specific admin
+"owns" a ticket. A real support-ticket-assignment feature (if ever needed) would be additive, not a
+redesign of what's here.
+
+**`status` is fillable, not guarded.** The first draft of `SupportTicket` excluded `status` from
+`#[Fillable(...)]` on the theory that only `UpdateSupportTicketStatusAction` should ever set it.
+That broke two things at once: `UpdateSupportTicketStatusAction`'s plain `update(['status' => ...])`
+call silently no-op'd (the mass-assignment guard dropping a field it wasn't told to allow), and so
+did the test factory's `resolved()`/`inProgress()` states. Reverted to the same shape
+`FlashcardDeck`'s own `status` field already uses: fillable on the model, with the *Form Request*
+(`CreateSupportTicketRequest`) never validating `status` as the actual enforcement — client input
+genuinely cannot reach it, the model-level guard was solving a problem the Form Request already
+solved, redundantly and at a real cost (two different places silently stopped working).
+
+**`Model::create()` doesn't reflect a DB-level default.** `CreateSupportTicketAction` sets
+`'status' => TicketStatus::Open` explicitly in the `create([...])` call rather than leaning on the
+migration's `->default('open')`. Leaving it out compiles and even persists the correct value to the
+database — but the *in-memory* `$ticket` instance `create()` hands back still shows `status: null`
+(Eloquent never re-fetches a DB-applied default onto the object it already has), so the resource
+returned from `POST /support/tickets` serialized `status: null` on the very first response, before
+a page reload would've shown "open" correctly. Same root cause as the `email_verified_at` /
+`streak_count` gotchas already documented elsewhere in this file — caught here by the Action's own
+test asserting on the immediate response, not by a later bug report.
+
+**Reusing the Notifications pipeline, not building a second one.** `SupportTicketReplyNotification`
+(`app/Domain/Support/Notifications/`) is a second class extending Laravel's built-in
+`Notification`, `via(): ['database']`, same shape as `AnnouncementNotification`. Nothing about
+`NotificationController`, `GET /notifications`, or the frontend's `NotificationBell` changed to
+support this — the only new piece anywhere in that pipeline is `NotificationController::index()`
+now also projecting an optional `support_ticket_id` out of the notification's `data` column, present
+only on this notification type, which is what lets the frontend deep-link a tapped notification
+straight into the right ticket's thread instead of just showing text.
+
+**Only an admin's reply notifies.** `ReplyToSupportTicketAction::handle()` checks
+`$author->hasRole('admin')` before calling `notify()` — a student replying to their own ticket
+doesn't notify themselves. Covered by two tests on opposite sides of this
+(`SupportTicketTest::test_a_students_own_reply_does_not_notify_anyone`,
+`AdminSupportTicketTest::test_an_admin_reply_notifies_the_student_who_filed_the_ticket`), since a
+notification *not* firing is exactly the kind of thing that's easy to accidentally break without
+either test catching it.
+
+## Password reset — a registered-but-unwired config key, and a role-aware fix
+
+`config('app.frontend_url')` has been read by `AppServiceProvider::boot()`'s
+`ResetPassword::createUrlUsing()` closure since early in this project, building each reset email's
+link as `{frontend_url}/password-reset/{token}?email={email}`. What went unnoticed until
+2026-10-21: `config/app.php` never actually defined a `'frontend_url'` key at all — `env('FRONTEND_URL')`
+existed in `.env` and was read directly by `config/cors.php`, but nothing exposed it under
+`config('app.*')`. `config('app.frontend_url')` silently resolved to `null`, so every password
+reset email this app ever sent contained a bare `/password-reset/{token}?...` path with no scheme
+or host — not a 404, not an exception, just a link that looked plausible in isolation and went
+nowhere. `PasswordResetTest.php`'s existing coverage used `Notification::fake()`, which records
+that a notification *would* have been sent without ever rendering its actual content — exactly the
+kind of gap that lets a broken link ship silently. Caught by reading the real generated link out
+of the log-driver mailer (`MAIL_MAILER=log` locally) during manual verification, not by a test;
+`PasswordResetTest::test_reset_link_points_at_the_students_own_app_not_admins` now renders the
+notification for real (`->toMail($user)->actionUrl`) specifically so this can't regress silently
+again.
+
+**Also made role-aware while fixing it.** Two frontends share this backend, so one `frontend_url`
+was never going to be enough — `config/app.php` now has both `frontend_url` (admin/lecturer,
+existing `FRONTEND_URL` env var) and `student_frontend_url` (new `STUDENT_FRONTEND_URL` env var),
+and the `createUrlUsing` closure picks between them based on `$notifiable->hasRole('student')`.
+The student app has real pages consuming this now (`/forgot-password`, `/password-reset/:token`,
+both public routes, plus a "Forgot password?" link on sign-in) — **the admin console does not**,
+a known, not-yet-closed gap: its reset emails now correctly point at `localhost:5173`, but there's
+no route there yet to receive them.
+
 ## Running locally with file uploads — `php artisan serve` silently caps them at 2MB
 
 `SoundLibrary` added the first real file-upload endpoint (`POST /sounds` with `audio_file`,
@@ -308,7 +394,72 @@ failure mode. `public/.user.ini` stays in the repo regardless, since most real d
 reverse proxy to PHP-FPM (the standard Laravel setup), Nginx has its *own* independent upload cap
 — `client_max_body_size`, defaulting to 1MB — enforced before the request ever reaches PHP, with a
 413. Raising PHP's limits doesn't touch this; it needs its own line in the Nginx site config
-whenever this actually gets deployed.
+whenever this actually gets deployed. (`docker/nginx.conf.template` sets this explicitly for the
+production image — see "Deployment" below.)
+
+## Deployment — `SOUNDS_DISK`, and why local disk was never going to work in production
+
+Full how-to is `docs/DEPLOYMENT.md`; this is the *why* behind one specific decision in it.
+
+`SoundController` is the only place in this app that writes an uploaded file. Through local dev
+it wrote straight to the `public` disk (`storage/app/public`), which is fine on a machine that
+keeps running — but almost every free app-hosting tier (Render's included) runs on an **ephemeral
+filesystem**: anything written to local disk is gone on the next redeploy, often on a restart too.
+Shipping that as-is would mean every sound upload survives until the next deploy, then silently
+vanishes — the exact failure already seen once in dev (a real uploaded file outlived its database
+row after an unrelated seeder reset, see `tests/Feature/SoundLibrary/`), except in production
+*both* the row and the file would go.
+
+Fix: `config/filesystems.php` gained a `sounds_disk` key (`env('SOUNDS_DISK', 'public')`), and
+`SoundController::storeUploadedAudio()` reads the disk name from there instead of hardcoding
+`'public'`. Locally this changes nothing (defaults to `public`, same as before). In production,
+`SOUNDS_DISK=s3` points it at the **existing** `s3` disk entry in that same config file — already
+written generically (`endpoint`/`use_path_style_endpoint` both configurable) specifically so it
+works against any S3-compatible provider, not only AWS. Backblaze B2 was the provider picked for
+free-no-card object storage; nothing in the app code knows or cares that it isn't AWS.
+
+Why a separate `sounds_disk` key instead of just repointing the framework's own `'default'` disk:
+`SoundController` is the *only* caller — confirmed by grepping the whole `app/` tree for
+`Storage::disk(`/`->store(` before making this change. Repointing `'default'` would be a global
+change justified by a single-feature need; `sounds_disk` scopes the decision to exactly what
+needed it.
+
+**Revised 2026-10-23, twice, settling on: public bucket + plain URLs, provider = Supabase
+Storage.** The first version of this fix had `storeUploadedAudio()` call
+`Storage::disk($disk)->url($path)` once at upload time and store the result permanently in
+`file_url` — which only works if the bucket is *publicly* readable. That ran into a real free-tier
+wall: Backblaze B2 gates a bucket's first switch to public visibility behind a one-time
+card-verification charge, confirmed live when "Public" blocked a deployment explicitly scoped to
+free-no-card services mid-setup.
+
+The *second* version switched to a private B2 bucket with presigned reads
+(`Storage::disk('s3')->temporaryUrl(...)`) to avoid the card requirement — this is where the real
+time went. Presigned reads failed consistently against B2's S3-compatible API: confirmed with raw
+`aws-sdk-php` calls that bypassed Laravel/Flysystem entirely (ruling out a wrapper-specific bug),
+confirmed the key's capabilities genuinely included `readFiles`, confirmed it wasn't a
+signature-version mismatch — `GetObject`/`HeadObject`/`ListObjectsV2` failed every time with
+`InvalidAccessKeyId: Malformed Access Key Id` while `PutObject`/`DeleteObject` on the *identical*
+credentials mostly succeeded (with enough inconsistency on retests that this looks like
+infrastructure-level instability on B2's end, not a client-side config bug worth chasing further).
+
+Rather than keep debugging a provider's internals from the outside, moved to **Supabase Storage**
+(also free, also no card, also S3-compatible — same `AWS_*` env var shape, zero code changes to
+switch providers) with the bucket set **public**. Supabase offers public buckets as a first-class,
+cardless option, and "public" there only affects reads — uploads/deletes still require
+authorization via Supabase's RLS policies, so going public costs nothing on the write side. Going
+public also means `Sound::resolvedUrl()` no longer needs `temporaryUrl()`/presigned-URL support at
+all — just plain `->url($path)` for every disk, local or `s3` alike. That removes signing from the
+picture entirely, which is exactly the part that broke with B2. The storage-model split from the
+first revision stayed:
+
+- `sounds.file_path` (nullable) holds the raw storage path for an *uploaded* file; `file_url` holds
+  a pasted external URL exactly as before. Exactly one of the two is ever set —
+  `SoundController::store()`/`update()` explicitly null out whichever one doesn't apply, so a sound
+  that switches from a paste to an upload (or back) can't end up with a stale value in the other
+  column silently winning later.
+- `Sound::resolvedUrl()` is what every caller actually reads (`SoundResource` calls it, nothing
+  reads `file_url` directly anymore) — resolved fresh on every call rather than cached, so swapping
+  the backing disk/provider again later never leaves a stale URL sitting in the database.
 
 ## Automated tests — three gotchas specific to this stack
 

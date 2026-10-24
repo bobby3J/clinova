@@ -1,0 +1,19 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# react-router needs every path to fall through to index.html — without
+# this, refreshing on anything but "/" (or a direct link to it) 404s,
+# since Netlify's static host otherwise looks for a literal file at that
+# path and finds nothing.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# VITE_API_URL / VITE_API_ORIGIN are read at *build* time (see
+# src/lib/api.ts) — set their real values in Netlify's dashboard under
+# Site configuration > Environment variables, not here (this file is
+# committed to the repo; the production API URL isn't a secret, but
+# keeping all three frontend/backend URLs in one place — Netlify's UI —
+# is less error-prone than splitting them between there and git).

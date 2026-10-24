@@ -55,6 +55,12 @@ export default function Profile() {
           >
             Session Settings
           </Link>
+          <Link
+            to="/support"
+            className="flex h-12 items-center justify-center rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50 lg:flex-1"
+          >
+            Help & Support
+          </Link>
           <button
             type="button"
             onClick={handleLogout}

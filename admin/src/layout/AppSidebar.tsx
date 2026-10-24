@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { Link, useLocation } from "react-router";
 import {
   AudioIcon,
+  ChatIcon,
   CopyIcon,
   FolderIcon,
   GearIcon,
@@ -40,6 +41,7 @@ export const navItems: NavItem[] = [
   { icon: <GroupIcon />, name: "Users", path: "/users", roles: ["admin"] },
   { icon: <UserCircleIcon />, name: "Lecturers", path: "/lecturers", roles: ["admin"] },
   { icon: <PaperPlaneIcon />, name: "Announcements", path: "/announcements", roles: ["admin"] },
+  { icon: <ChatIcon />, name: "Support", path: "/support", roles: ["admin"] },
   { icon: <TimeIcon />, name: "Activity Log", path: "/activity-log", roles: ["admin"] },
   { icon: <GearIcon />, name: "Settings", path: "/settings" },
 ];

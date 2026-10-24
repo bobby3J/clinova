@@ -20,6 +20,7 @@ class StudyMaterialController extends Controller
      * everything. This is the one place that distinction is enforced for
      * *listing* — see StudyMaterialPolicy for the equivalent check on a
      * single item.
+     * 
      */
     public function index(Request $request, int $topic)
     {

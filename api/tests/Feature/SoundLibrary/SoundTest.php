@@ -111,7 +111,14 @@ class SoundTest extends TestCase
         $response->assertCreated();
 
         $sound = Sound::where('name', 'Uploaded Rain')->firstOrFail();
-        $this->assertStringContainsString('/storage/sounds/', $sound->file_url);
+        // Raw file_url stays null for an upload — the path lives in
+        // file_path instead, resolved into a real URL per-request (see
+        // Sound::resolvedUrl()), not stored permanently. assertCreated()
+        // above already exercised the API response's resolved file_url;
+        // this checks the underlying storage decision directly.
+        $this->assertNull($sound->file_url);
+        $this->assertStringContainsString('sounds/', $sound->file_path);
+        $this->assertStringContainsString('/storage/sounds/', $sound->resolvedUrl());
         $this->assertNotEmpty(Storage::disk('public')->files('sounds'));
     }
 
@@ -152,7 +159,14 @@ class SoundTest extends TestCase
             ]);
 
         $response->assertOk();
-        $this->assertStringContainsString('/storage/sounds/', $sound->fresh()->file_url);
+        $fresh = $sound->fresh();
+        // Switching to an upload must null out the old pasted file_url,
+        // not just add a file_path alongside it — see update()'s own
+        // comment on why a leftover file_url would otherwise win nothing
+        // visibly wrong today, but would be a landmine the moment
+        // resolvedUrl()'s priority order ever changed.
+        $this->assertNull($fresh->file_url);
+        $this->assertStringContainsString('/storage/sounds/', $fresh->resolvedUrl());
     }
 
     public function test_admin_can_update_a_sound(): void

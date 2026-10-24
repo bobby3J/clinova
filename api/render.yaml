@@ -1,0 +1,75 @@
+# Render Blueprint — creates the web service with these settings pre-filled;
+# every `sync: false` value still has to be typed into Render's dashboard
+# by hand (Render won't let a blueprint carry real secrets), but this file
+# means you only ever have to fill in values, never rediscover which ones
+# are needed. See api/docs/DEPLOYMENT.md for what goes in each one.
+services:
+  - type: web
+    name: clinova-api
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /up
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        sync: false
+      - key: APP_URL
+        sync: false
+
+      - key: DB_CONNECTION
+        value: mysql
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_DATABASE
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+
+      - key: SESSION_DRIVER
+        value: database
+      - key: SESSION_SAME_SITE
+        value: none
+      - key: SESSION_SECURE_COOKIE
+        value: "true"
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+
+      # Comma-separated — both production Netlify URLs go here, same
+      # convention as the local localhost:5173/127.0.0.1:5174 pair.
+      - key: FRONTEND_URLS
+        sync: false
+      - key: SANCTUM_STATEFUL_DOMAINS
+        sync: false
+
+      # Backblaze B2 (S3-compatible) — only used for sound uploads,
+      # see config/filesystems.php's 'sounds_disk'.
+      - key: SOUNDS_DISK
+        value: s3
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_DEFAULT_REGION
+        sync: false
+      - key: AWS_BUCKET
+        sync: false
+      - key: AWS_ENDPOINT
+        sync: false
+      - key: AWS_USE_PATH_STYLE_ENDPOINT
+        value: "true"
+
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.8-flash

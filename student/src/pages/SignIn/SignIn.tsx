@@ -12,9 +12,10 @@ export default function SignIn() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const locationState = location.state as { from?: string; message?: string } | null;
+
   if (!loading && user) {
-    const redirectTo = (location.state as { from?: string } | null)?.from ?? "/";
-    return <Navigate to={redirectTo} replace />;
+    return <Navigate to={locationState?.from ?? "/"} replace />;
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -48,6 +49,12 @@ export default function SignIn() {
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {locationState?.message && !error && (
+          <div className="rounded-xl bg-success-50 px-4 py-3 text-sm text-success-600">
+            {locationState.message}
+          </div>
+        )}
+
         {error && (
           <div className="rounded-xl bg-error-50 px-4 py-3 text-sm text-error-600">
             {error}
@@ -80,6 +87,12 @@ export default function SignIn() {
             placeholder="••••••••"
             className="h-12 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/20"
           />
+          <Link
+            to="/forgot-password"
+            className="mt-1.5 block text-right text-xs font-medium text-brand-600"
+          >
+            Forgot password?
+          </Link>
         </div>
 
         <button

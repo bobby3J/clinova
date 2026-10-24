@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * An ambient sound for the Study-With-Me focus timer. No draft/published
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * (shows up in the picker) or not. Simpler domain, simpler model: no Policy,
  * no Action, just this and a Controller.
  */
-#[Fillable(['uploaded_by', 'name', 'category', 'file_url', 'source', 'license', 'is_active'])]
+#[Fillable(['uploaded_by', 'name', 'category', 'file_url', 'file_path', 'source', 'license', 'is_active'])]
 #[UseFactory(SoundFactory::class)]
 
 class Sound extends Model
@@ -35,6 +36,37 @@ class Sound extends Model
     public function uploadedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
+    }
+
+    /**
+     * `file_path` (set only for an *uploaded* file, not a pasted file_url
+     * — see SoundController::storeUploadedAudio()) is resolved into a
+     * real URL fresh on every call, rather than once at upload time and
+     * stored permanently — so swapping the backing disk/provider later
+     * never leaves a stale URL sitting in the database.
+     *
+     * Plain `->url()` for every disk, not a presigned `temporaryUrl()` —
+     * this went through two real providers before landing here. B2
+     * required a *private* bucket (their free tier gates "public"
+     * visibility behind a one-time card charge), which meant relying on
+     * presigned reads — and those failed consistently against B2's
+     * S3-compatible API (confirmed with raw SDK calls, bypassing Laravel
+     * entirely, ruling out a Flysystem-specific bug) while plain
+     * writes/deletes worked fine. Moved to Supabase Storage instead, with
+     * the bucket set **public** — Supabase's own UI offers this as a
+     * first-class option with no card involved, and "public" there only
+     * affects reads: uploads/deletes still require authorization via
+     * their RLS policies, so this doesn't weaken write security at all.
+     * A public bucket removes signing from the equation entirely, which
+     * is exactly the part that broke with B2.
+     */
+    public function resolvedUrl(): ?string
+    {
+        if (! $this->file_path) {
+            return $this->file_url;
+        }
+
+        return Storage::disk(config('filesystems.sounds_disk'))->url($this->file_path);
     }
 
     /**

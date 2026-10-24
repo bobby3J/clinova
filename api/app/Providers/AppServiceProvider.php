@@ -25,8 +25,19 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Role-aware: a student's reset link must land on the student SPA,
+        // not the admin console, and vice versa — the two are genuinely
+        // separate apps on separate origins (see config/app.php's own
+        // comment on frontend_url/student_frontend_url). $notifiable is
+        // the User being reset; hasRole() is available since it's the
+        // same model Spatie's HasRoles trait is applied to everywhere
+        // else in this app.
         ResetPassword::createUrlUsing(function (object $notifiable, string $token) {
-            return config('app.frontend_url')."/password-reset/$token?email={$notifiable->getEmailForPasswordReset()}";
+            $base = $notifiable->hasRole('student')
+                ? config('app.student_frontend_url')
+                : config('app.frontend_url');
+
+            return $base."/password-reset/$token?email={$notifiable->getEmailForPasswordReset()}";
         });
     }
 }

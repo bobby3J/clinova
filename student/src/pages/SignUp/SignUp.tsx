@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate } from "react-router";
 import { useAuth } from "../../context/AuthContext";
 import { ApiError } from "../../types/common";
@@ -15,7 +15,17 @@ export default function SignUp() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
 
-  if (!loading && user) {
+  // register() sets `user` in AuthContext as a side effect, which
+  // schedules a re-render of *this* component before handleSubmit's own
+  // navigate("/welcome") call below necessarily runs — without this ref,
+  // that re-render's "already logged in" guard races the post-register
+  // redirect and can win, sending a brand-new signup straight to "/"
+  // with onboarding never shown at all. The ref is set synchronously
+  // inside handleSubmit, before register() resolves, so the guard is
+  // already suppressed by the time any such re-render happens.
+  const justRegisteredRef = useRef(false);
+
+  if (!loading && user && !justRegisteredRef.current) {
     return <Navigate to="/" replace />;
   }
 
@@ -25,9 +35,14 @@ export default function SignUp() {
     setFieldErrors({});
     setSubmitting(true);
     try {
+      justRegisteredRef.current = true;
       await register(name, email, password, passwordConfirmation);
-      navigate("/", { replace: true });
+      // A brand new account, not a returning one — this is the one and
+      // only trigger for onboarding now (see Onboarding.tsx's own
+      // docblock). Signing in later never routes here.
+      navigate("/welcome", { replace: true });
     } catch (err) {
+      justRegisteredRef.current = false;
       if (err instanceof ApiError && err.status === 422 && err.errors) {
         setFieldErrors(err.errors);
       } else if (err instanceof ApiError) {

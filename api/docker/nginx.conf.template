@@ -1,0 +1,26 @@
+# ${PORT} is substituted by entrypoint.sh at container start — Render
+# assigns this dynamically and the service must bind to whatever it gives,
+# not a fixed port. Defaults to 8080 for local `docker run` without Render.
+server {
+    listen ${PORT};
+    server_name _;
+    root /app/public;
+    index index.php;
+
+    client_max_body_size 25M;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_index index.php;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}

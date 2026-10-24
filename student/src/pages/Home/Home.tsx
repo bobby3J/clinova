@@ -55,6 +55,17 @@ export default function Home() {
 
   const firstName = user?.name?.split(" ")[0] ?? "Future Nurse";
 
+  // The browser's own local time, not UTC/the server's — correct for a
+  // student in any timezone (Ghana included, GMT/UTC+0 year-round, no
+  // DST) with no per-country logic needed. Was hardcoded to "Good
+  // morning" regardless of actual time until this was flagged.
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    return "Good evening";
+  }, []);
+
   return (
     <AppShell background="bg-gray-50">
       <MobileTopBar />
@@ -79,7 +90,7 @@ export default function Home() {
 
           <div className="mb-6">
             <h1 className="text-xl font-semibold text-gray-800 lg:text-2xl">
-              Good morning, {firstName} 👋
+              {greeting}, {firstName} 👋
             </h1>
             <p className="mt-0.5 text-sm text-gray-500">
               Ready to make progress today?

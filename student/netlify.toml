@@ -1,0 +1,13 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Same SPA-fallback reasoning as admin/netlify.toml — react-router needs
+# every path to resolve to index.html, not a literal static file.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# VITE_API_URL / VITE_API_ORIGIN: set in Netlify's dashboard per the same
+# note in admin/netlify.toml.

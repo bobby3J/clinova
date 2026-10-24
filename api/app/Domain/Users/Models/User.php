@@ -6,6 +6,7 @@ namespace App\Domain\Users\Models;
 use App\Domain\AiPractice\Models\AiPracticeSet;
 use App\Domain\Shared\Enums\Track;
 use App\Domain\StudySessions\Models\StudySession;
+use App\Domain\Support\Models\SupportTicket;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -93,5 +94,10 @@ class User extends Authenticatable
     public function aiPracticeSets(): HasMany
     {
         return $this->hasMany(AiPracticeSet::class);
+    }
+
+    public function supportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class);
     }
 }

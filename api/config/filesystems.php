@@ -17,6 +17,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Sound Upload Disk
+    |--------------------------------------------------------------------------
+    |
+    | SoundController is the only place in this app that stores an uploaded
+    | file (app/Domain/SoundLibrary). Deliberately a separate setting from
+    | 'default' above — switching this to 's3' (or any other disk) in
+    | production doesn't change where anything else in the framework reads
+    | or writes. Set SOUNDS_DISK=s3 wherever local disk won't persist
+    | across deploys (most free hosts); leave unset locally.
+    |
+    */
+
+    'sounds_disk' => env('SOUNDS_DISK', 'public'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
     |
