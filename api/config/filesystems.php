@@ -72,8 +72,17 @@ return [
             'url' => env('AWS_URL'),
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
-            'throw' => false,
-            'report' => false,
+            // 'throw' => false (Laravel's default) swallowed a real sound
+            // upload failure in production without a trace: store() just
+            // returned false, SoundController read that as a valid (empty)
+            // path, and the admin got back a 201 with a sound that had no
+            // playable URL at all — no exception, no log line, nothing to
+            // debug from. Only this app's one disk (used solely by
+            // SoundController::storeUploadedAudio() and
+            // Sound::resolvedUrl()), so throwing here can't regress
+            // anything else.
+            'throw' => true,
+            'report' => true,
         ],
 
     ],
