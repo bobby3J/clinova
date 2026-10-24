@@ -2,6 +2,34 @@
   command = "npm run build"
   publish = "dist"
 
+# Proxies the API through this same Netlify origin instead of calling
+# Render directly cross-site. Sanctum's CSRF flow sets the XSRF-TOKEN
+# cookie via a plain Set-Cookie header — src/lib/api.ts's
+# readXsrfTokenCookie() then has to read it back out of document.cookie
+# client-side to put it in the X-XSRF-TOKEN header. A cookie set by a
+# different origin (api.onrender.com) is never visible to JS running on
+# this origin at all — that's not a SameSite/CORS setting to tune, it's
+# the browser's same-origin policy, full stop. Proxying makes the
+# browser's actual network request same-origin (it only ever talks to
+# this Netlify domain; Netlify's edge relays it to Render server-side),
+# so the cookie Set-Cookie arrives on is this domain's own, and
+# document.cookie can read it. Confirmed broken for real in a browser
+# (419 "CSRF token mismatch" on login) even though curl-based testing
+# against the direct Render URL had falsely "passed" — curl pulls a
+# cookie straight out of its own jar and injects it as a header, which
+# is exactly the cross-origin read a real browser's JS can never do.
+# Must come before the SPA catch-all below — Netlify matches top to
+# bottom, first rule wins.
+[[redirects]]
+  from = "/api/*"
+  to = "https://clinova-hzbk.onrender.com/api/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/sanctum/*"
+  to = "https://clinova-hzbk.onrender.com/sanctum/:splat"
+  status = 200
+
 # react-router needs every path to fall through to index.html — without
 # this, refreshing on anything but "/" (or a direct link to it) 404s,
 # since Netlify's static host otherwise looks for a literal file at that
@@ -11,9 +39,7 @@
   to = "/index.html"
   status = 200
 
-# VITE_API_URL / VITE_API_ORIGIN are read at *build* time (see
-# src/lib/api.ts) — set their real values in Netlify's dashboard under
-# Site configuration > Environment variables, not here (this file is
-# committed to the repo; the production API URL isn't a secret, but
-# keeping all three frontend/backend URLs in one place — Netlify's UI —
-# is less error-prone than splitting them between there and git).
+# VITE_API_URL / VITE_API_ORIGIN now point at THIS site's own origin
+# (e.g. https://clinova-admin.netlify.app and .../api), not Render
+# directly — see the proxy redirects above for why. Set in Netlify's
+# dashboard under Site configuration > Environment variables.

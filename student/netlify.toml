@@ -2,6 +2,21 @@
   command = "npm run build"
   publish = "dist"
 
+# Proxies the API through this same Netlify origin — see
+# admin/netlify.toml's matching rules for the full reasoning (a cross-
+# origin XSRF-TOKEN cookie is never readable from document.cookie here,
+# confirmed broken for real in a browser). Must come before the SPA
+# catch-all below.
+[[redirects]]
+  from = "/api/*"
+  to = "https://clinova-hzbk.onrender.com/api/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/sanctum/*"
+  to = "https://clinova-hzbk.onrender.com/sanctum/:splat"
+  status = 200
+
 # Same SPA-fallback reasoning as admin/netlify.toml — react-router needs
 # every path to resolve to index.html, not a literal static file.
 [[redirects]]
@@ -9,5 +24,5 @@
   to = "/index.html"
   status = 200
 
-# VITE_API_URL / VITE_API_ORIGIN: set in Netlify's dashboard per the same
-# note in admin/netlify.toml.
+# VITE_API_URL / VITE_API_ORIGIN now point at THIS site's own origin —
+# see admin/netlify.toml's note.

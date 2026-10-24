@@ -106,16 +106,35 @@ first load seems to hang.
 
 Two separate sites, same account, pointing at the same repo but different base directories.
 
+**Both `netlify.toml` files proxy `/api/*` and `/sanctum/*` straight through to the Render API**,
+hardcoded to `https://clinova-hzbk.onrender.com` — update that hostname in both files if your
+Render service URL differs. This is load-bearing, not an optimization: Sanctum's CSRF flow sets an
+`XSRF-TOKEN` cookie that the frontend has to read back out of `document.cookie` client-side (see
+`src/lib/api.ts`'s `readXsrfTokenCookie()`) to send as the `X-XSRF-TOKEN` header. A cookie set by a
+*different* origin (the bare Render URL) is never visible to `document.cookie` on the Netlify
+page at all — that's the browser's same-origin policy, not a CORS/SameSite setting anything on the
+server can relax. Confirmed broken for real in a browser (419 "CSRF token mismatch" on login)
+*after* curl-based testing against the direct Render URL had falsely "passed" — curl pulls a
+cookie straight out of its own jar and injects it as a header, which is exactly the cross-origin
+read a real browser's JS can never do. Proxying through Netlify's own domain makes the browser's
+actual request same-origin, so the cookie lands on this domain and `document.cookie` can read it.
+
 **Admin:**
 1. New site from Git → pick the repo → Base directory: `admin` (the rest comes from
-   `admin/netlify.toml`: build command `npm run build`, publish `dist`).
+   `admin/netlify.toml`: build command `npm run build`, publish `dist`, plus the two proxy
+   redirects above).
 2. Site configuration → Environment variables → add `VITE_API_URL` =
-   `https://<your-render-service>.onrender.com/api` and `VITE_API_ORIGIN` =
-   `https://<your-render-service>.onrender.com`.
-3. Deploy. Note the resulting URL (e.g. `https://clinova-admin.netlify.app`).
+   `https://<this-site's-own-netlify-url>/api` and `VITE_API_ORIGIN` =
+   `https://<this-site's-own-netlify-url>` — **this site's own domain, not Render's** (the proxy
+   redirect is what actually reaches Render; pointing the frontend at Render directly defeats the
+   whole point and brings back the cross-origin cookie problem).
+3. Deploy. Note the resulting URL (e.g. `https://clinova-admin.netlify.app`) — if it differs from
+   what's hardcoded in `admin/netlify.toml`'s redirects, that's fine (the redirect target is the
+   *API*, not this site), but double check `VITE_API_URL`/`VITE_API_ORIGIN` match this site's own
+   final URL exactly.
 
-**Student:** same steps, Base directory `student`, same two env vars, same Render URL. Note its
-own resulting URL too.
+**Student:** same steps, Base directory `student`, same two env vars pointed at student's own
+Netlify URL (not Render's, not admin's).
 
 ## 5. Close the loop — CORS and cookies
 
@@ -125,14 +144,15 @@ Both frontend URLs now exist — go back to Render and update:
 - `SANCTUM_STATEFUL_DOMAINS` = `clinova-admin.netlify.app,clinova-student.netlify.app`
   (host only, no scheme — same convention `SANCTUM_STATEFUL_DOMAINS` already uses locally)
 
-Redeploy the API for these to take effect.
+Redeploy the API for these to take effect. These still matter even with the Netlify proxy in
+place: Laravel sees the browser's real `Origin` header (Netlify relays it unchanged), and CORS/
+Sanctum's stateful-domain check both key off that.
 
 **Why `SESSION_SAME_SITE=none` + `SESSION_SECURE_COOKIE=true` (already set in `render.yaml`):**
-in production the frontend (`*.netlify.app`) and API (`*.onrender.com`) are genuinely different
-sites, not just different ports like `localhost`/`127.0.0.1` locally — browsers won't send a
-`SameSite=Lax` cookie on a cross-site request at all. `None` is required for Sanctum's SPA cookie
-auth to work across these two domains; `Secure` is mandatory whenever `SameSite=None` is set, and
-both Render and Netlify serve HTTPS by default so this doesn't cost anything.
+left as `none`/`Secure` rather than tightened to `lax` now that the proxy makes requests look
+same-origin to the browser — `None` is simply the more permissive setting (it still allows a
+same-origin request to set/send the cookie fine), so there's no correctness reason to narrow it,
+and leaving it means the API still works if anything ever calls it directly, unproxied.
 
 ## Not yet verified
 
