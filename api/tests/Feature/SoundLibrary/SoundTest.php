@@ -222,4 +222,26 @@ class SoundTest extends TestCase
             ->patchJson("/api/sounds/{$sound->id}/activate")
             ->assertJsonPath('data.is_active', true);
     }
+
+    public function test_admin_can_delete_a_sound(): void
+    {
+        $sound = Sound::factory()->create();
+
+        $this->actingAs($this->admin())
+            ->deleteJson("/api/sounds/{$sound->id}")
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('sounds', ['id' => $sound->id]);
+    }
+
+    public function test_students_cannot_delete_a_sound(): void
+    {
+        $sound = Sound::factory()->create();
+
+        $this->actingAs($this->student())
+            ->deleteJson("/api/sounds/{$sound->id}")
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('sounds', ['id' => $sound->id]);
+    }
 }

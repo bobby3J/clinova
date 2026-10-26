@@ -11,5 +11,6 @@ Route::middleware('auth:sanctum')->prefix('sounds')->group(function () {
         Route::patch('/{sound}', [SoundController::class, 'update']);
         Route::patch('/{sound}/deactivate', [SoundController::class, 'deactivate']);
         Route::patch('/{sound}/activate', [SoundController::class, 'activate']);
+        Route::delete('/{sound}', [SoundController::class, 'destroy']);
     });
 });

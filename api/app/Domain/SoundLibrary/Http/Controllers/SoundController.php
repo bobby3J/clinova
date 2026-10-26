@@ -120,4 +120,21 @@ class SoundController extends Controller
 
         return new SoundResource($sound);
     }
+
+    /**
+     * A real delete, not just deactivate() — for a genuine mistake (wrong
+     * file, a test upload) rather than a sound being retired from active
+     * use. Doesn't also delete the underlying storage object, same
+     * reasoning as update()'s replace-on-update case: not worth the risk
+     * of deleting a file some other record might still reference, for a
+     * storage cost this small. study_sessions.sound_id is nullOnDelete
+     * (not cascade), so deleting a Sound never breaks old session history
+     * — it just loses the reference, same as a deactivated sound would.
+     */
+    public function destroy(Sound $sound)
+    {
+        $sound->delete();
+
+        return response()->noContent();
+    }
 }
