@@ -45,25 +45,40 @@ class Sound extends Model
      * stored permanently — so swapping the backing disk/provider later
      * never leaves a stale URL sitting in the database.
      *
-     * Plain `->url()` for every disk, not a presigned `temporaryUrl()` —
-     * this went through two real providers before landing here. B2
-     * required a *private* bucket (their free tier gates "public"
-     * visibility behind a one-time card charge), which meant relying on
-     * presigned reads — and those failed consistently against B2's
-     * S3-compatible API (confirmed with raw SDK calls, bypassing Laravel
-     * entirely, ruling out a Flysystem-specific bug) while plain
+     * Plain `->url()`/a public-URL build for every disk, not a presigned
+     * `temporaryUrl()` — this went through two real providers before
+     * landing here. B2 required a *private* bucket (their free tier gates
+     * "public" visibility behind a one-time card charge), which meant
+     * relying on presigned reads — and those failed consistently against
+     * B2's S3-compatible API (confirmed with raw SDK calls, bypassing
+     * Laravel entirely, ruling out a Flysystem-specific bug) while plain
      * writes/deletes worked fine. Moved to Supabase Storage instead, with
      * the bucket set **public** — Supabase's own UI offers this as a
      * first-class option with no card involved, and "public" there only
      * affects reads: uploads/deletes still require authorization via
      * their RLS policies, so this doesn't weaken write security at all.
-     * A public bucket removes signing from the equation entirely, which
-     * is exactly the part that broke with B2.
+     *
+     * Second real gotcha, found after the first live upload: Supabase's
+     * S3-compatible *endpoint* (what Flysystem's `s3` adapter writes to
+     * and what its own `->url()` builds against) still 403s on a plain
+     * read — "AccessDenied: Missing signature" — even on a public bucket.
+     * Only Supabase's separate *native* public-object URL, a different
+     * hostname and path entirely, actually serves an unsigned public GET.
+     * `sounds_public_url_base` is that project base URL; when it's set,
+     * it wins over the disk's own `->url()` for exactly this reason.
      */
     public function resolvedUrl(): ?string
     {
         if (! $this->file_path) {
             return $this->file_url;
+        }
+
+        $publicUrlBase = config('filesystems.sounds_public_url_base');
+
+        if ($publicUrlBase) {
+            $bucket = config('filesystems.disks.s3.bucket');
+
+            return rtrim($publicUrlBase, '/')."/storage/v1/object/public/{$bucket}/{$this->file_path}";
         }
 
         return Storage::disk(config('filesystems.sounds_disk'))->url($this->file_path);

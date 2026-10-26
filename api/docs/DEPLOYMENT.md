@@ -60,18 +60,25 @@ option there** (not card-gated), which sidesteps the entire presigned-URL questi
    using Aiven/MySQL; only Storage is used from Supabase).
 3. **Storage** → create a bucket (any name, e.g. `clinova-sounds`) — toggle **Public bucket** on.
    This only affects reads; uploads/deletes still require authorization via Supabase's RLS
-   policies, so going public doesn't weaken write security. `Sound::resolvedUrl()` uses a plain
-   `->url($path)` for this reason — no presigned/temporary URL involved at all.
+   policies, so going public doesn't weaken write security.
 4. **Project Settings → Storage → S3 Connection** — enable it. This generates an Access Key ID +
    Secret Access Key (shown once), and shows the S3-compatible endpoint + region.
 5. Maps to Render env vars:
    - `AWS_ACCESS_KEY_ID` = the Access Key ID
    - `AWS_SECRET_ACCESS_KEY` = the Secret Access Key
    - `AWS_BUCKET` = your bucket name
-   - `AWS_DEFAULT_REGION` = the region shown on the S3 Connection page
+   - `AWS_DEFAULT_REGION` = the region shown on the S3 Connection page, exact match — a region
+     mismatch here signs requests incorrectly and every write fails with a generic-looking
+     `SignatureDoesNotMatch`, confirmed live
    - `AWS_ENDPOINT` = the full S3-compatible endpoint URL
    - `AWS_USE_PATH_STYLE_ENDPOINT` = `true`
    - `SOUNDS_DISK` = `s3`
+   - `SUPABASE_PUBLIC_URL` = your project's bare URL, e.g. `https://<ref>.supabase.co` — **not**
+     the S3-compatible endpoint's hostname (that one has a `storage.` subdomain the public-URL
+     host doesn't). Required even on a public bucket: confirmed live that Supabase's
+     S3-compatible endpoint 403s on a plain unsigned GET ("AccessDenied: Missing signature") —
+     only this separate native public-object URL shape actually serves one. Without this var,
+     `Sound::resolvedUrl()` falls back to a URL that uploads fine but never plays.
 
 **Known caveat:** Supabase's free-tier projects pause after 7 days with zero activity (one-click
 resume from the dashboard, no data loss — not a concern once the app has real traffic, worth

@@ -33,6 +33,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Sound Public URL Base (Supabase only)
+    |--------------------------------------------------------------------------
+    |
+    | Supabase Storage exposes two completely different URL shapes for the
+    | same object: its S3-compatible endpoint (AWS_ENDPOINT, what the SDK
+    | writes to) and a separate native "public object" URL, under a
+    | different hostname (no `storage.` subdomain) and a different path
+    | (`/storage/v1/object/public/{bucket}/{path}`, not `/storage/v1/s3/...`).
+    | Confirmed live: the S3-endpoint path 403s on a plain GET even for a
+    | public bucket ("AccessDenied: Missing signature") — Supabase's S3
+    | gateway requires a signature for reads too, it's only the native path
+    | that serves unsigned public reads. Sound::resolvedUrl() needs this
+    | second base URL to build a link that's actually playable; left unset,
+    | it falls back to the (write-only-usable) disk URL — fine locally
+    | where SOUNDS_DISK is the local 'public' disk, broken in production
+    | without this. Value is just the project's bare URL, e.g.
+    | https://<ref>.supabase.co — no path, no trailing slash.
+    |
+    */
+
+    'sounds_public_url_base' => env('SUPABASE_PUBLIC_URL'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
     |
