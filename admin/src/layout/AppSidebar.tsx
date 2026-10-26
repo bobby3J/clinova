@@ -47,10 +47,11 @@ export const navItems: NavItem[] = [
 ];
 
 /**
- * Shared by AppSidebar (renders this directly) and AppLayout's
- * MobileBottomNav (slices the first 5 of *this*, not of the raw
- * `navItems` — slicing the unfiltered array would leak admin-only items
- * into a lecturer's mobile bottom nav).
+ * The one place role-based nav filtering happens — AppSidebar is the
+ * only nav surface now (mobile used to have a separate bottom nav that
+ * silently truncated to 5 items, hiding half the admin sections; removed
+ * in favor of this same drawer on every screen size, opened via
+ * AppHeader's hamburger, which is no longer hidden below `lg`).
  */
 export function getVisibleNavItems(user: AuthUser | null): NavItem[] {
   return navItems.filter((item) => {
@@ -62,7 +63,8 @@ export function getVisibleNavItems(user: AuthUser | null): NavItem[] {
 }
 
 const AppSidebar: React.FC = () => {
-  const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
+  const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleMobileSidebar } =
+    useSidebar();
   const location = useLocation();
   const { user } = useAuth();
   const visibleNavItems = getVisibleNavItems(user);
@@ -74,7 +76,7 @@ const AppSidebar: React.FC = () => {
 
   return (
     <aside
-      className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200
+      className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-500 ease-in-out z-50 border-r border-gray-200
         ${
           isExpanded || isMobileOpen
             ? "w-[290px]"
@@ -133,6 +135,7 @@ const AppSidebar: React.FC = () => {
                   <li key={nav.name}>
                     <Link
                       to={nav.path}
+                      onClick={() => isMobileOpen && toggleMobileSidebar()}
                       className={`menu-item group ${
                         isActive(nav.path)
                           ? "menu-item-active"

@@ -195,8 +195,16 @@ layer(base);
        its untransformed width toward the page's scrollable area, which
        opens a horizontal scrollbar/overflow on phones even though the
        sidebar is visually off-screen. This guard is what actually
-       prevents that; it's not optional polish. */
-    @apply overflow-x-hidden;
+       prevents that; it's not optional polish.
+       `clip`, not `hidden` — confirmed live that `hidden` broke
+       AppHeader's `sticky top-0`: setting overflow on either axis
+       implicitly turns the other axis to `auto` too, which makes the
+       browser treat html/body as a scroll container in its own right
+       rather than the viewport, and position: sticky doesn't track that
+       correctly — the header just scrolled away like a normal element.
+       `overflow: clip` suppresses the same overflow without establishing
+       a scroll container at all, so it can't trigger that. */
+    @apply overflow-x-clip;
   }
   body {
     @apply relative font-normal font-outfit z-1 bg-gray-50;
