@@ -1,6 +1,6 @@
 # Clinova Student App — Starting Point
 
-Last updated: 2026-10-21 (Onboarding + Support, §4g — plus a real time-of-day greeting and a forgot/reset-password flow, §4h; both same day)
+Last updated: 2026-10-28 (PWA support — installable, works offline for repeat visits, §4i)
 
 ## 1) What this project is
 
@@ -432,6 +432,52 @@ this exact bug can't come back silently.
 `/password-reset/:token` path — its reset emails are now generated correctly but have nowhere to
 land yet.
 
+## 4i) PWA support — installable, and the app shell loads offline on repeat visits
+
+A PWA needs three things: HTTPS (already true via Netlify), a **manifest** (a small JSON file
+telling the browser the app's name/icons/launch mode), and a **service worker** (a background
+script the browser registers once, which is what makes "Add to Home Screen" available at all and
+lets the app shell load instantly — even offline — on a repeat visit). None of this existed before
+this pass.
+
+**`vite-plugin-pwa`** (new devDependency) generates both from a config block in `vite.config.ts`,
+using its default `generateSW` strategy — Workbox builds the service worker and its precache list
+automatically from Vite's own build output, so there's no hand-written cache logic to get subtly
+wrong. `registerType: "autoUpdate"` means a new deploy's service worker takes over automatically
+on the next visit, rather than requiring extra "a new version is available, reload?" UI — the
+simpler of the two options, and fine for this app (briefly stale content isn't high-stakes here).
+
+**Icons**: a manifest needs real bitmap (PNG) icons, not the existing SVG logomark alone. Generated
+four from it (`public/icons/`, via a one-off Node script using `@resvg/resvg-js` to rasterize, not
+checked into the repo): `icon-192.png`/`icon-512.png` (logo centered on white, standard "any"
+purpose), `icon-maskable-512.png` (logo at 50% scale on a full-bleed brand-teal background — Android
+crops maskable icons into whatever shape the launcher wants, circle/squircle/etc., so content has
+to stay inside the center ~80% "safe zone" or it gets clipped), and `apple-touch-icon.png` (180×180,
+for iOS specifically — see below).
+
+**iOS gets extra manual tags** in `index.html`: `vite-plugin-pwa` auto-injects the
+`<link rel="manifest">` and the service-worker registration script at build time, but Safari
+ignores the manifest's own `icons` array for its home-screen icon — it needs the explicit
+`<link rel="apple-touch-icon">` tag instead, plus `apple-mobile-web-app-capable`/
+`-status-bar-style` meta tags for a standalone (no browser chrome) launch. Android gets standalone
+launch from the manifest's own `display: "standalone"` alone.
+
+**Testing note, read before assuming it's broken**: the service worker is disabled under
+`npm run dev` by default — Workbox doesn't interact well with Vite's HMR, so this isn't a bug. To
+actually see install prompts or offline behavior, build and serve the production bundle:
+`npm run build && npm run preview`, then open dev tools' Application/Service Workers panel (or
+Lighthouse's PWA audit) against that.
+
+Verified: `npm run build` produces `dist/manifest.webmanifest` (well-formed — `name`, icons array
+with the maskable entry's `purpose`, `theme_color` matching the existing `#0e7c6b` brand teal
+already in `index.html`'s meta tag), `dist/sw.js` + `dist/workbox-*.js` (Workbox's generated
+service worker, precaching 9 entries / ~295 KiB — the full app shell), and confirmed
+`dist/index.html` actually contains the injected `<link rel="manifest">` and registration
+`<script>` tags, not just that the build didn't error. **Not yet done**: an actual install on a
+real phone/browser — same "no browser automation available in this session" gap as everything
+else in §5 below, just newly relevant here specifically (an install prompt and offline reload are
+real-device/real-browser behaviors, not something a build log confirms).
+
 ## 5) Verified
 
 - `php artisan test` — 164/164 (up from 146; Support's two test files added 17 tests this round —
@@ -506,3 +552,8 @@ land yet.
    half-closed** — a support reply *does* push-notify (that's the whole feature), proving the
    pattern works end to end. Flashcard/AI-Practice-publish notifications are still the one
    remaining instance of that gap, unchanged by this round.
+7. **PWA install, on a real device** (§4i) — `npm run build` confirms the manifest/service worker
+   are generated correctly, but nobody has actually tapped "Add to Home Screen" on a phone yet.
+   Once deployed to Netlify, worth checking: does an install prompt actually appear (Android
+   Chrome), does `apple-touch-icon.png` show up right on iOS's home screen, and does a second
+   offline-ish visit actually load instantly from the service worker's cache.

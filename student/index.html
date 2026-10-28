@@ -6,6 +6,15 @@
     <link rel="icon" type="image/svg+xml" href="/images/logo/clinova-mark.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
     <meta name="theme-color" content="#0e7c6b" />
+    <!-- vite-plugin-pwa injects <link rel="manifest"> and the service
+         worker registration automatically at build time — not added here
+         by hand. iOS Safari ignores the manifest's own icons though, so
+         it needs this explicit tag, plus these two meta tags for a
+         standalone (no browser chrome) launch when added to the home
+         screen — Android gets that from the manifest's display mode. -->
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   </head>
   <body class="bg-gray-50">
     <div id="root"></div>
