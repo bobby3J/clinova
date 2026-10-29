@@ -50,11 +50,18 @@ class StudyMaterialController extends Controller
 
     public function store(StoreStudyMaterialRequest $request)
     {
+        $validated = $request->validated();
+        unset($validated['slide_file']);
+
+        if ($request->hasFile('slide_file')) {
+            $validated['file_path'] = $this->storeUploadedSlideDeck($request);
+        }
+
         // Same reasoning as FlashcardDeckController::store() — status has a
         // DB-level default, but Eloquent's create() won't reflect it on the
         // in-memory model without a fresh SELECT. Set it explicitly.
         $material = StudyMaterial::create([
-            ...$request->validated(),
+            ...$validated,
             'created_by' => $request->user()->id,
             'status' => ContentStatus::Draft,
         ]);
@@ -64,9 +71,29 @@ class StudyMaterialController extends Controller
 
     public function update(UpdateStudyMaterialRequest $request, StudyMaterial $studyMaterial)
     {
-        $studyMaterial->update($request->validated());
+        $validated = $request->validated();
+        unset($validated['slide_file']);
+
+        if ($request->hasFile('slide_file')) {
+            $validated['file_path'] = $this->storeUploadedSlideDeck($request);
+        }
+
+        $studyMaterial->update($validated);
 
         return new StudyMaterialResource($studyMaterial);
+    }
+
+    /**
+     * Same reasoning as SoundController::storeUploadedAudio() — stores the
+     * raw path, not a resolved URL (StudyMaterial::resolvedFileUrl() builds
+     * that per-request), on an env-driven disk so local dev and production
+     * can point at different storage without a code change.
+     */
+    private function storeUploadedSlideDeck(Request $request): string
+    {
+        $disk = config('filesystems.materials_disk');
+
+        return $request->file('slide_file')->store('materials', $disk);
     }
 
     /**

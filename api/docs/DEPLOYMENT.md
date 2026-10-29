@@ -73,12 +73,15 @@ option there** (not card-gated), which sidesteps the entire presigned-URL questi
    - `AWS_ENDPOINT` = the full S3-compatible endpoint URL
    - `AWS_USE_PATH_STYLE_ENDPOINT` = `true`
    - `SOUNDS_DISK` = `s3`
+   - `MATERIALS_DISK` = `s3` — same bucket, same credentials, separate setting (StudyLibrary's
+     Slides upload type, added 2026-10-29; see `config/filesystems.php`'s `materials_disk`)
    - `SUPABASE_PUBLIC_URL` = your project's bare URL, e.g. `https://<ref>.supabase.co` — **not**
      the S3-compatible endpoint's hostname (that one has a `storage.` subdomain the public-URL
      host doesn't). Required even on a public bucket: confirmed live that Supabase's
      S3-compatible endpoint 403s on a plain unsigned GET ("AccessDenied: Missing signature") —
      only this separate native public-object URL shape actually serves one. Without this var,
-     `Sound::resolvedUrl()` falls back to a URL that uploads fine but never plays.
+     `Sound::resolvedUrl()`/`StudyMaterial::resolvedFileUrl()` fall back to a URL that uploads
+     fine but never plays/displays.
 
 **Known caveat:** Supabase's free-tier projects pause after 7 days with zero activity (one-click
 resume from the dashboard, no data loss — not a concern once the app has real traffic, worth
@@ -96,7 +99,7 @@ knowing for a quiet demo/student deployment).
    - `APP_URL` — Render gives you the service's URL once created (e.g.
      `https://clinova-api.onrender.com`); come back and set this after the first deploy.
    - The five `DB_*` values from Aiven (step 1).
-   - The six B2/`AWS_*` values + `SOUNDS_DISK` (step 2).
+   - The six B2/`AWS_*` values + `SOUNDS_DISK` + `MATERIALS_DISK` + `SUPABASE_PUBLIC_URL` (step 2).
    - `FRONTEND_URLS` and `SANCTUM_STATEFUL_DOMAINS` — placeholder for now
      (`https://placeholder.netlify.app`), real values come after step 4.
    - `GEMINI_API_KEY` — the same key already in your local `api/.env`.

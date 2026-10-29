@@ -19,6 +19,10 @@ class StudyMaterialResource extends JsonResource
             'title' => $this->title,
             'body' => $this->body,
             'url' => $this->url,
+            // Resolved per-request, not read straight off file_path — see
+            // StudyMaterial::resolvedFileUrl()'s docblock. Null for every
+            // type except Slides.
+            'file_url' => $this->resolvedFileUrl(),
             'duration_minutes' => $this->duration_minutes,
             // $this->when(condition, value) only adds this key to the JSON
             // at all when the condition is true — a student's response

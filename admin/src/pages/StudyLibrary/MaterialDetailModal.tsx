@@ -1,24 +1,30 @@
 import { Modal } from "../../components/ui/modal";
 import Badge from "../../components/ui/badge/Badge";
 import Button from "../../components/ui/button/Button";
-import { AlertIcon, AudioIcon, FileIcon, TimeIcon, VideoIcon } from "../../icons";
+import { AlertIcon, AudioIcon, DocsIcon, FileIcon, TimeIcon, VideoIcon } from "../../icons";
 import type { ContentStatus, MaterialType } from "../../types/common";
 import type { StudyMaterial } from "../../types/studyLibrary";
 
-// Reuses AlertIcon rather than adding a new SVG asset — this codebase has
-// a documented history of newly-added icon SVGs silently rendering
-// invisible (missing fill), so reusing a known-good one sidesteps that
+// Reuses existing icons rather than adding new SVG assets — this codebase
+// has a documented history of newly-added icon SVGs silently rendering
+// invisible (missing fill), so reusing known-good ones sidesteps that
 // class of bug entirely.
 const TYPE_ICON: Record<MaterialType, typeof FileIcon> = {
   note: FileIcon,
   video: VideoIcon,
   audio: AudioIcon,
   tip: AlertIcon,
+  slides: DocsIcon,
 };
 
 /** Note and Tip both carry their content as body text; Video/Audio carry a URL instead. */
 function isTextBased(type: MaterialType): boolean {
   return type === "note" || type === "tip";
+}
+
+/** The one uploaded-file type — see StoreStudyMaterialRequest's slide_file rule. */
+function isFileBased(type: MaterialType): boolean {
+  return type === "slides";
 }
 
 const STATUS_BADGE: Record<
@@ -81,6 +87,24 @@ export default function MaterialDetailModal({
           <div className="max-h-80 overflow-y-auto rounded-lg border border-gray-100 bg-gray-50 p-4 text-sm whitespace-pre-wrap text-gray-700 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-300">
             {material.body || (
               <span className="text-gray-400">No body text.</span>
+            )}
+          </div>
+        ) : isFileBased(material.type) ? (
+          <div>
+            <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-gray-400">
+              Slide deck
+            </p>
+            {material.file_url ? (
+              <a
+                href={material.file_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block truncate rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm text-brand-600 hover:underline dark:border-gray-800 dark:bg-white/[0.03] dark:text-brand-400"
+              >
+                View PDF
+              </a>
+            ) : (
+              <p className="text-sm text-gray-400">No file uploaded.</p>
             )}
           </div>
         ) : (

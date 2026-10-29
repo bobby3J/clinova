@@ -17,23 +17,39 @@ class StudyMaterialFactory extends Factory
     {
         $type = fake()->randomElement(MaterialType::cases());
         $isTextBased = in_array($type, [MaterialType::Note, MaterialType::Tip], true);
+        $isFileBased = $type === MaterialType::Slides;
 
         return [
             'topic_id' => Topic::factory(),
             'created_by' => null,
             'type' => $type,
             'title' => fake()->sentence(4),
-            // Note/Tip carry their content as text; video/audio carry a URL
-            // instead — only one of the two ever makes sense per row, so we
-            // fill whichever one matches the randomly chosen $type. Checked
-            // via an explicit two-member array rather than "!== Note", same
-            // fix as StoreStudyMaterialRequest's validation rules — that
-            // inverse check silently assumed Note was the only text type.
+            // Note/Tip carry their content as text, video/audio carry a
+            // pasted URL, Slides carries an uploaded file_path — exactly
+            // one of the three ever makes sense per row, filled by
+            // whichever matches the randomly chosen $type. Checked via
+            // explicit membership rather than e.g. "!== Note", same fix as
+            // StoreStudyMaterialRequest's validation rules — that inverse
+            // check silently assumed Note was the only text type.
             'body' => $isTextBased ? fake()->paragraphs(3, true) : null,
-            'url' => $isTextBased ? null : fake()->url(),
+            'url' => (! $isTextBased && ! $isFileBased) ? fake()->url() : null,
+            'file_path' => $isFileBased ? 'materials/'.fake()->uuid().'.pdf' : null,
             'duration_minutes' => $isTextBased ? null : fake()->numberBetween(3, 45),
             'status' => ContentStatus::Draft,
         ];
+    }
+
+    /**
+     * State: an uploaded slide deck. Usage: StudyMaterial::factory()->slides()->create().
+     */
+    public function slides(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => MaterialType::Slides,
+            'body' => null,
+            'url' => null,
+            'file_path' => 'materials/'.fake()->uuid().'.pdf',
+        ]);
     }
 
     /**

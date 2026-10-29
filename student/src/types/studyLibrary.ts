@@ -22,7 +22,7 @@ export interface Topic {
   order: number;
 }
 
-export type MaterialType = "note" | "video" | "audio" | "tip";
+export type MaterialType = "note" | "video" | "audio" | "tip" | "slides";
 
 export interface StudyMaterial {
   id: number;
@@ -31,5 +31,8 @@ export interface StudyMaterial {
   title: string;
   body: string | null;
   url: string | null;
+  // Resolved server-side, present only for the Slides type — see
+  // api/app/Domain/StudyLibrary/Models/StudyMaterial.php's resolvedFileUrl().
+  file_url: string | null;
   duration_minutes: number | null;
 }

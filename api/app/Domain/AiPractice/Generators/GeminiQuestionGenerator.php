@@ -3,11 +3,13 @@
 namespace App\Domain\AiPractice\Generators;
 
 use App\Domain\AiPractice\Contracts\QuestionGenerator;
+use App\Domain\StudyLibrary\Enums\MaterialType;
 use App\Domain\StudyLibrary\Models\StudyMaterial;
 use App\Domain\StudyLibrary\Models\Topic;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Throwable;
 
@@ -52,10 +54,21 @@ class GeminiQuestionGenerator implements QuestionGenerator
             throw new RuntimeException('GEMINI_API_KEY is not configured.');
         }
 
-        $response = Http::timeout(60)
+        $parts = [
+            ['text' => $this->buildPrompt($topic, $materials, $maxQuestions)],
+            ...$this->buildSlideParts($materials),
+        ];
+
+        // 90s, not 60 — confirmed live that a text-only request comfortably
+        // finishes well inside 60s, but a Slides-attached (PDF) request
+        // genuinely takes longer server-side on Gemini's end and hit this
+        // timeout exactly. Dockerfile's max_execution_time/nginx's
+        // fastcgi_read_timeout are both 120s specifically to stay above
+        // this with real headroom, not coincidentally close to it.
+        $response = Http::timeout(90)
             ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$key}", [
                 'contents' => [
-                    ['parts' => [['text' => $this->buildPrompt($topic, $materials, $maxQuestions)]]],
+                    ['parts' => $parts],
                 ],
                 'generationConfig' => [
                     'responseMimeType' => 'application/json',
@@ -109,18 +122,53 @@ class GeminiQuestionGenerator implements QuestionGenerator
             ->all();
     }
 
+    /**
+     * Gemini reads documents natively — layout, diagrams, charts included —
+     * rather than this app extracting text from the PDF itself first, which
+     * would lose exactly that content. Fetched via Storage directly (not a
+     * re-fetch over the public URL): the app already holds S3 credentials,
+     * so this is a normal authenticated read, not a second network hop
+     * through Supabase's public endpoint.
+     */
+    private function buildSlideParts(Collection $materials): array
+    {
+        return $materials
+            ->filter(fn (StudyMaterial $m) => $m->type === MaterialType::Slides && $m->file_path)
+            ->map(function (StudyMaterial $m) {
+                $bytes = Storage::disk(config('filesystems.materials_disk'))->get($m->file_path);
+
+                return [
+                    'inlineData' => [
+                        'mimeType' => 'application/pdf',
+                        'data' => base64_encode($bytes),
+                    ],
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
     private function buildPrompt(Topic $topic, Collection $materials, int $maxQuestions): string
     {
         $content = $materials
             ->map(fn (StudyMaterial $material) => "## {$material->title}\n".strip_tags((string) $material->body))
             ->implode("\n\n");
 
+        $slideTitles = $materials
+            ->filter(fn (StudyMaterial $m) => $m->type === MaterialType::Slides)
+            ->pluck('title');
+
+        $slideNote = $slideTitles->isNotEmpty()
+            ? "\n\nAlso use the attached slide deck document(s) as grounding material — titled: "
+                .$slideTitles->implode(', ').'.'
+            : '';
+
         return <<<PROMPT
             You are writing multiple-choice practice questions for nursing and midwifery
             students, based strictly on the study material below for the topic "{$topic->name}".
 
             Study material:
-            {$content}
+            {$content}{$slideNote}
 
             Generate up to {$maxQuestions} multiple-choice questions, thoroughly covering the
             material — ask multiple distinct questions about different facts, details, or

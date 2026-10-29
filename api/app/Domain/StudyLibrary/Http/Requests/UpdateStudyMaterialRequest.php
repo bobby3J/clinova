@@ -24,6 +24,7 @@ class UpdateStudyMaterialRequest extends FormRequest
             'title' => ['sometimes', 'string', 'max:255'],
             'body' => ['sometimes', 'nullable', 'string'],
             'url' => ['sometimes', 'nullable', 'url', 'max:2048'],
+            'slide_file' => ['sometimes', 'nullable', 'file', 'mimes:pdf', 'max:20480'],
             'duration_minutes' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:600'],
         ];
     }

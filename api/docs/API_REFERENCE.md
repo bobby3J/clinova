@@ -80,7 +80,7 @@ No pagination exists anywhere yet — every index endpoint returns its full resu
 |---|---|
 | `Track` | `nursing`, `midwifery` |
 | `ContentStatus` | `draft`, `in_review`, `published` |
-| `MaterialType` | `note`, `video`, `audio`, `tip` (added 2026-10-06 — lecturer-authored exam tips; text-based like `note`, not URL-based) |
+| `MaterialType` | `note`, `video`, `audio`, `tip` (added 2026-10-06 — lecturer-authored exam tips; text-based like `note`, not URL-based), `slides` (added 2026-10-29 — uploaded PDF, not URL-based or typed text; see `StudyMaterial.file_url`) |
 | `ProgressStatus` | `new`, `learning`, `mastered` |
 | `SessionType` | `focus`, `break` (every session created via the API is currently always `focus`) |
 | `TicketStatus` | `open`, `in_progress`, `resolved` (added 2026-10-21 — Support domain) |
@@ -92,7 +92,7 @@ Copy-paste starting point — matches the Resources exactly, including which fie
 ```ts
 export type Track = 'nursing' | 'midwifery';
 export type ContentStatus = 'draft' | 'in_review' | 'published';
-export type MaterialType = 'note' | 'video' | 'audio' | 'tip';
+export type MaterialType = 'note' | 'video' | 'audio' | 'tip' | 'slides';
 export type ProgressStatus = 'new' | 'learning' | 'mastered';
 export type SessionType = 'focus' | 'break';
 
@@ -134,6 +134,7 @@ export interface StudyMaterial {
   title: string;
   body: string | null;
   url: string | null;
+  file_url: string | null; // resolved server-side; only non-null for type 'slides'
   duration_minutes: number | null;
   status?: ContentStatus;   // admin only — key is absent for students, not null
   published_at?: string | null; // admin only
@@ -392,14 +393,15 @@ All routes under `/study-library`, all require authentication. Admin-only routes
 { "subject_id": "integer, required, must exist", "name": "string, required, max:255", "order": "integer, optional, min:0" }
 ```
 
-**POST `/materials`** — `type` decides which of `body`/`url` is required:
+**POST `/materials`** — `type` decides which of `body`/`url`/`slide_file` is required:
 ```json
 {
   "topic_id": "integer, required, must exist",
-  "type": "note | video | audio | tip, required",
+  "type": "note | video | audio | tip | slides, required",
   "title": "string, required, max:255",
   "body": "required if type=note or tip, otherwise ignored",
   "url": "required if type=video or audio, must be a valid URL",
+  "slide_file": "required if type=slides — multipart upload, PDF only, max 20MB",
   "duration_minutes": "integer, optional, 1-600 — relevant for video/audio"
 }
 ```

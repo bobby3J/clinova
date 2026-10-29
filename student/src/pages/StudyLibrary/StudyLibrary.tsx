@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Link } from "react-router";
 import AppShell from "../../components/AppShell";
 import BottomNav from "../../components/BottomNav";
@@ -9,11 +9,18 @@ import {
   BookIcon,
   ChevronLeftIcon,
   FolderIcon,
+  SlidesIcon,
   VideoIcon,
 } from "../../components/icons";
 import { useAuth } from "../../context/AuthContext";
 import { getSubjects, getTopics, getTopicMaterials } from "../../lib/studyLibrary";
 import type { Subject, Topic, StudyMaterial, MaterialType } from "../../types/studyLibrary";
+
+// Lazy, not a static import — react-pdf + pdfjs-dist added ~380KB to the
+// main bundle, downloaded by every student on every page load regardless
+// of whether they ever open a Slides material. Split into its own chunk,
+// fetched only the moment someone actually views one.
+const SlideViewer = lazy(() => import("../../components/SlideViewer"));
 
 type Level = "subjects" | "topics" | "materials" | "detail";
 
@@ -22,11 +29,17 @@ const TYPE_ICON: Record<MaterialType, typeof BookIcon> = {
   video: VideoIcon,
   audio: AudioIcon,
   tip: AlertIcon,
+  slides: SlidesIcon,
 };
 
 /** Note and Tip both carry their content as body text; Video/Audio carry a URL instead. */
 function isTextBased(type: MaterialType): boolean {
   return type === "note" || type === "tip";
+}
+
+/** The one uploaded-file type — see api's StoreStudyMaterialRequest's slide_file rule. */
+function isFileBased(type: MaterialType): boolean {
+  return type === "slides";
 }
 
 /**
@@ -218,6 +231,20 @@ export default function StudyLibrary() {
                 <p className="text-sm leading-relaxed whitespace-pre-wrap text-gray-700">
                   {selectedMaterial.body || "No content yet."}
                 </p>
+              ) : isFileBased(selectedMaterial.type) ? (
+                selectedMaterial.file_url ? (
+                  <Suspense
+                    fallback={
+                      <p className="py-10 text-center text-sm text-gray-400">
+                        Loading slides…
+                      </p>
+                    }
+                  >
+                    <SlideViewer fileUrl={selectedMaterial.file_url} />
+                  </Suspense>
+                ) : (
+                  <p className="text-sm text-gray-400">No file set.</p>
+                )
               ) : selectedMaterial.url ? (
                 <a
                   href={selectedMaterial.url}

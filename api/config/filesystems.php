@@ -33,7 +33,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Sound Public URL Base (Supabase only)
+    | Study Material Upload Disk
+    |--------------------------------------------------------------------------
+    |
+    | Same reasoning as sounds_disk above, separate setting: StudyMaterial's
+    | Slides type (app/Domain/StudyLibrary) is the only uploaded-file material
+    | type — Note/Tip are typed text, Video/Audio are pasted external links.
+    | Set MATERIALS_DISK=s3 wherever local disk won't persist across deploys;
+    | leave unset locally.
+    |
+    */
+
+    'materials_disk' => env('MATERIALS_DISK', 'public'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Supabase Public URL Base
     |--------------------------------------------------------------------------
     |
     | Supabase Storage exposes two completely different URL shapes for the
@@ -44,14 +59,20 @@ return [
     | Confirmed live: the S3-endpoint path 403s on a plain GET even for a
     | public bucket ("AccessDenied: Missing signature") — Supabase's S3
     | gateway requires a signature for reads too, it's only the native path
-    | that serves unsigned public reads. Sound::resolvedUrl() needs this
-    | second base URL to build a link that's actually playable; left unset,
-    | it falls back to the (write-only-usable) disk URL — fine locally
-    | where SOUNDS_DISK is the local 'public' disk, broken in production
-    | without this. Value is just the project's bare URL, e.g.
-    | https://<ref>.supabase.co — no path, no trailing slash.
+    | that serves unsigned public reads. Both Sound::resolvedUrl() and
+    | StudyMaterial::resolvedFileUrl() need this second base URL to build a
+    | link that's actually usable; left unset, they fall back to the
+    | (write-only-usable) disk URL — fine locally where *_DISK is the local
+    | 'public' disk, broken in production without this. Value is just the
+    | project's bare URL, e.g. https://<ref>.supabase.co — no path, no
+    | trailing slash. One value, same Supabase project, both domains — not
+    | sound-specific despite the env var's name (SUPABASE_PUBLIC_URL),
+    | which stays as-is so an already-deployed Render service doesn't need a
+    | second copy of the same value under a new name.
     |
     */
+
+    'supabase_public_url_base' => env('SUPABASE_PUBLIC_URL'),
 
     'sounds_public_url_base' => env('SUPABASE_PUBLIC_URL'),
 

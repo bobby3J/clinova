@@ -110,7 +110,7 @@ class TemplateQuestionGenerator implements QuestionGenerator
     /** video/audio materials, or a note/tip with no usable body text. */
     private function buildTypeQuestion(StudyMaterial $material): array
     {
-        $typeLabels = ['note' => 'Note', 'video' => 'Video', 'audio' => 'Audio', 'tip' => 'Exam Tip'];
+        $typeLabels = ['note' => 'Note', 'video' => 'Video', 'audio' => 'Audio', 'tip' => 'Exam Tip', 'slides' => 'Slide Deck'];
         $correctLabel = $typeLabels[$material->type->value] ?? ucfirst($material->type->value);
         $options = collect($typeLabels)->values()->shuffle();
 

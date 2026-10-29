@@ -270,6 +270,30 @@ traffic: rate-limiting (Laravel's `throttle` middleware) on `POST /ai-practice/s
 non-fallback call now has real per-request cost and a shared free-tier rate limit across all
 students — not enforced yet, noted here so it isn't forgotten.
 
+**Slides materials (added 2026-10-29) are sent to Gemini as a real document, not extracted text.**
+`StudyMaterial`'s Slides type (an uploaded PDF — the one file-based material type, alongside Note/Tip's
+typed text and Video/Audio's pasted URL; see the "Deployment" section below for the Supabase storage
+side of this) has no `body` text at all, unlike every other type `buildPrompt()` was written against.
+Rather than extracting
+text from the PDF first (losing diagrams/layout/charts in the process), `GeminiQuestionGenerator::
+buildSlideParts()` reads the file straight from storage and attaches it to the request as a second
+`contents[0].parts` entry — `{inlineData: {mimeType: 'application/pdf', data: <base64>}}` — alongside
+the usual text prompt, which Gemini's models read natively. Fetched via `Storage::disk(materials_disk)
+->get()` directly, not a second HTTP round-trip through Supabase's public URL — the app already holds
+S3 credentials, so this is an ordinary authenticated read.
+
+Confirmed live (via `Http::fake()`, not a real round trip — see below for why) that the request this
+builds is correct: two parts, the text one mentioning the slide deck's title, the `inlineData` one's
+base64 decoding back to a byte-identical copy of the source PDF. **Never got a live successful
+response to confirm Gemini's actual behavior against a real multimodal request** — every attempt
+during this work, including a plain *text-only* one that doesn't touch any of this new code, hit the
+same `503 UNAVAILABLE: high demand` this section already documented as a known real failure mode.
+Two real things did come out of hitting that wall repeatedly, though: PHP's `max_execution_time`
+(30s default) was killing the request before `Http::timeout()` even got a chance to, and raising that
+revealed the HTTP timeout itself (60s) was too short for a PDF-attached call too — both raised (see
+`Dockerfile`, `docker/nginx.conf.template`, `public/.user.ini`, and `GeminiQuestionGenerator`'s own
+90s `Http::timeout()`), independent of whatever was causing the 503s.
+
 ## Support — a student <-> admin channel, split across two controllers on purpose
 
 Added 2026-10-21 alongside the onboarding screen (see student app's `PROJECT_STARTING_POINT.md`
@@ -397,7 +421,7 @@ reverse proxy to PHP-FPM (the standard Laravel setup), Nginx has its *own* indep
 whenever this actually gets deployed. (`docker/nginx.conf.template` sets this explicitly for the
 production image — see "Deployment" below.)
 
-## Deployment — `SOUNDS_DISK`, and why local disk was never going to work in production
+## Deployment — `SOUNDS_DISK`/`MATERIALS_DISK`, and why local disk was never going to work in production
 
 Full how-to is `docs/DEPLOYMENT.md`; this is the *why* behind one specific decision in it.
 
@@ -460,6 +484,13 @@ first revision stayed:
 - `Sound::resolvedUrl()` is what every caller actually reads (`SoundResource` calls it, nothing
   reads `file_url` directly anymore) — resolved fresh on every call rather than cached, so swapping
   the backing disk/provider again later never leaves a stale URL sitting in the database.
+
+**StudyMaterial's Slides type (added 2026-10-29) reuses this exact shape wholesale** —
+`materials_disk` instead of `sounds_disk`, `StudyMaterial::resolvedFileUrl()` instead of
+`Sound::resolvedUrl()`, both reading the same `supabase_public_url_base` config key (renamed from
+`sounds_public_url_base` when this second caller showed up — one Supabase project, one public-URL
+base, no reason for a second env var under a different name). No B2-era detour this time around;
+the Supabase-specific lesson above was already learned.
 
 ## Automated tests — three gotchas specific to this stack
 

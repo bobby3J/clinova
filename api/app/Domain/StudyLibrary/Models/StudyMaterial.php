@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * A single piece of content — a note, video, or audio clip — that a student
@@ -27,7 +28,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 // UpdateStudyMaterialRequest never validate those keys, so raw client input
 // can never reach here regardless of what's mass-assignable.
 
-#[Fillable(['topic_id', 'created_by', 'type', 'title', 'body', 'url', 'duration_minutes', 'status', 'published_at'])]
+#[Fillable(['topic_id', 'created_by', 'type', 'title', 'body', 'url', 'file_path', 'duration_minutes', 'status', 'published_at'])]
 #[UseFactory(StudyMaterialFactory::class)]
 
 class StudyMaterial extends Model
@@ -63,5 +64,29 @@ class StudyMaterial extends Model
     protected function visibleToStudents(Builder $query): void
     {
         $query->where('status', ContentStatus::Published);
+    }
+
+    /**
+     * Same shape as Sound::resolvedUrl() — see that method's docblock for
+     * why a plain public-URL build, not the disk's own ->url(), is what
+     * actually works against Supabase. Only meaningful for Slides (the one
+     * uploaded-file material type); null file_path just means "not a
+     * file-based material," not an error.
+     */
+    public function resolvedFileUrl(): ?string
+    {
+        if (! $this->file_path) {
+            return null;
+        }
+
+        $publicUrlBase = config('filesystems.supabase_public_url_base');
+
+        if ($publicUrlBase) {
+            $bucket = config('filesystems.disks.s3.bucket');
+
+            return rtrim($publicUrlBase, '/')."/storage/v1/object/public/{$bucket}/{$this->file_path}";
+        }
+
+        return Storage::disk(config('filesystems.materials_disk'))->url($this->file_path);
     }
 }

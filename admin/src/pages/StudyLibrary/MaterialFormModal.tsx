@@ -26,11 +26,17 @@ const TYPE_OPTIONS: { value: MaterialType; label: string }[] = [
   { value: "video", label: "Video" },
   { value: "audio", label: "Audio" },
   { value: "tip", label: "Exam Tip" },
+  { value: "slides", label: "Slides (PDF)" },
 ];
 
 /** Note and Tip both carry their content as body text; Video/Audio carry a URL instead. */
 function isTextBased(type: MaterialType): boolean {
   return type === "note" || type === "tip";
+}
+
+/** The one uploaded-file type — see StoreStudyMaterialRequest's slide_file rule. */
+function isFileBased(type: MaterialType): boolean {
+  return type === "slides";
 }
 
 /**
@@ -57,6 +63,7 @@ export default function MaterialFormModal({
   const [title, setTitle] = useState(material?.title ?? "");
   const [body, setBody] = useState(material?.body ?? "");
   const [url, setUrl] = useState(material?.url ?? "");
+  const [slideFile, setSlideFile] = useState<File | null>(null);
   const [durationMinutes, setDurationMinutes] = useState(
     material?.duration_minutes ? String(material.duration_minutes) : "",
   );
@@ -77,6 +84,11 @@ export default function MaterialFormModal({
       return;
     }
 
+    if (!isEdit && isFileBased(type) && !slideFile) {
+      setFieldErrors({ slide_file: ["Choose a PDF to upload."] });
+      return;
+    }
+
     setSubmitting(true);
     try {
       const duration = durationMinutes.trim()
@@ -84,12 +96,35 @@ export default function MaterialFormModal({
         : null;
 
       if (isEdit) {
-        const res = await updateMaterial(material.id, {
-          title,
-          body: isTextBased(type) ? body || null : null,
-          url: isTextBased(type) ? null : url || null,
-          duration_minutes: duration,
-        });
+        if (slideFile) {
+          // Replacing the file — FormData, same reasoning as create's
+          // file-based branch below. _method spoofing isn't needed here
+          // (apiFetch's PATCH-with-FormData handling already appends it).
+          const formData = new FormData();
+          formData.append("title", title);
+          formData.append("slide_file", slideFile);
+          if (duration !== null) {
+            formData.append("duration_minutes", String(duration));
+          }
+          const res = await updateMaterial(material.id, formData);
+          onSaved(res.data);
+        } else {
+          const res = await updateMaterial(material.id, {
+            title,
+            body: isTextBased(type) ? body || null : null,
+            url: isTextBased(type) ? null : url || null,
+            duration_minutes: duration,
+          });
+          onSaved(res.data);
+        }
+      } else if (isFileBased(type)) {
+        const formData = new FormData();
+        formData.append("topic_id", String(topicId));
+        formData.append("type", type);
+        formData.append("title", title);
+        // slideFile is guaranteed non-null here (checked above).
+        formData.append("slide_file", slideFile as File);
+        const res = await createMaterial(formData);
         onSaved(res.data);
       } else {
         const res = await createMaterial({
@@ -206,6 +241,34 @@ export default function MaterialFormModal({
               {fieldError("body") && (
                 <p className="mt-1 text-xs text-error-500">
                   {fieldError("body")}
+                </p>
+              )}
+            </div>
+          ) : isFileBased(type) ? (
+            <div>
+              <Label htmlFor="slide_file">
+                {isEdit ? "Replace PDF (optional)" : "PDF"}
+              </Label>
+              {isEdit && material.file_url && (
+                <a
+                  href={material.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mb-2 block text-xs text-brand-600 underline"
+                >
+                  View current file
+                </a>
+              )}
+              <input
+                id="slide_file"
+                type="file"
+                accept="application/pdf"
+                onChange={(e) => setSlideFile(e.target.files?.[0] ?? null)}
+                className="block w-full text-sm text-gray-600 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-600 dark:text-gray-300"
+              />
+              {fieldError("slide_file") && (
+                <p className="mt-1 text-xs text-error-500">
+                  {fieldError("slide_file")}
                 </p>
               )}
             </div>

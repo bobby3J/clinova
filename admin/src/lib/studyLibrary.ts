@@ -66,7 +66,12 @@ export function getTopicMaterials(topicId: number) {
   );
 }
 
-export function createMaterial(payload: CreateStudyMaterialPayload) {
+// FormData, not just the typed payload — Slides materials upload a real
+// file (apiFetch already handles FormData vs JSON transparently, see
+// lib/api.ts), the other four types still send plain JSON.
+export function createMaterial(
+  payload: CreateStudyMaterialPayload | FormData,
+) {
   return apiPost<ApiResponse<StudyMaterial>>(
     "/study-library/materials",
     payload,
@@ -75,7 +80,7 @@ export function createMaterial(payload: CreateStudyMaterialPayload) {
 
 export function updateMaterial(
   id: number,
-  payload: UpdateStudyMaterialPayload,
+  payload: UpdateStudyMaterialPayload | FormData,
 ) {
   return apiPatch<ApiResponse<StudyMaterial>>(
     `/study-library/materials/${id}`,

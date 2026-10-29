@@ -18,4 +18,7 @@ enum MaterialType: string
 
     /** A lecturer-authored exam tip — text-based, same shape as Note. */
     case Tip = 'tip';
+
+    /** An uploaded slide deck (PDF) — see StudyMaterial::resolvedFileUrl(). */
+    case Slides = 'slides';
 }

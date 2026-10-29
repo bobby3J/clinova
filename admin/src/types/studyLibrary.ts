@@ -38,6 +38,9 @@ export interface StudyMaterial {
   title: string;
   body: string | null;
   url: string | null;
+  // Resolved server-side, present only for the Slides type — see
+  // api/app/Domain/StudyLibrary/Models/StudyMaterial.php's resolvedFileUrl().
+  file_url: string | null;
   duration_minutes: number | null;
   // Absent (not null) for non-admins — StudyMaterialResource only includes
   // these keys at all when the caller is an admin. This console is

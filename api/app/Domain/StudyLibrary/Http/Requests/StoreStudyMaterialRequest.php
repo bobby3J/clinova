@@ -43,6 +43,15 @@ class StoreStudyMaterialRequest extends FormRequest
             // type (Tip) was added.
             'body' => ['required_if:type,'.MaterialType::Note->value.','.MaterialType::Tip->value, 'nullable', 'string'],
             'url' => ['required_if:type,'.MaterialType::Video->value.','.MaterialType::Audio->value, 'nullable', 'url', 'max:2048'],
+            // Slides is the one uploaded-file type — matches Sound's own
+            // upload rule (mimes/size), just pdf-only.
+            'slide_file' => [
+                'required_if:type,'.MaterialType::Slides->value,
+                'nullable',
+                'file',
+                'mimes:pdf',
+                'max:20480', // KB — matches public/.user.ini's upload_max_filesize
+            ],
             'duration_minutes' => ['nullable', 'integer', 'min:1', 'max:600'],
         ];
     }

@@ -19,6 +19,7 @@ import {
   AlertIcon,
   AudioIcon,
   CheckCircleIcon,
+  DocsIcon,
   EyeIcon,
   FileIcon,
   FolderIcon,
@@ -43,6 +44,7 @@ const TYPE_ICON: Record<MaterialType, typeof FileIcon> = {
   video: VideoIcon,
   audio: AudioIcon,
   tip: AlertIcon,
+  slides: DocsIcon,
 };
 
 const STATUS_BADGE: Record<

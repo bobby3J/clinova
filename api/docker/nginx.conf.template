@@ -18,6 +18,10 @@ server {
         fastcgi_index index.php;
         include fastcgi_params;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        # Matches the Dockerfile's max_execution_time=120 — nginx's own
+        # default (60s) would otherwise cut the connection to php-fpm
+        # before PHP's own limit even applies, same class of bug.
+        fastcgi_read_timeout 120s;
     }
 
     location ~ /\.(?!well-known).* {

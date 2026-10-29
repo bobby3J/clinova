@@ -1,6 +1,6 @@
 # Clinova Student App — Starting Point
 
-Last updated: 2026-10-28 (PWA support — installable, works offline for repeat visits, §4i)
+Last updated: 2026-10-29 (Slides study materials — upload a PDF, view it in-app, Gemini reads it natively for AI Practice, §4j)
 
 ## 1) What this project is
 
@@ -478,6 +478,47 @@ real phone/browser — same "no browser automation available in this session" ga
 else in §5 below, just newly relevant here specifically (an install prompt and offline reload are
 real-device/real-browser behaviors, not something a build log confirms).
 
+## 4j) Slides study materials — an uploaded PDF, viewed in-app, read natively by Gemini
+
+Prompted by the user noting that *typing* subject content was exhausting for bulky material —
+lecturers can now upload a PDF slide deck as a `StudyMaterial` instead of typing a `note`/`tip`
+body or pasting a `video`/`audio` URL. Full backend design (schema, Supabase storage reuse,
+Gemini's multimodal input) is in `api/docs/ARCHITECTURE.md`'s AiPractice and Deployment sections —
+this entry is the student-app-specific half.
+
+**Viewing a slide deck**: `src/components/SlideViewer.tsx`, built on `react-pdf` — pinned to
+`9.2.1` specifically, not the latest major (`11.x` requires React 19; this app is still on React
+18.3.1, matching admin). One page at a time with Prev/Next buttons, not a continuous scroll —
+matches this app's single-screen-at-a-time mobile shell better than a long scrollable document
+would on a phone-width viewport. Wired into `StudyLibrary.tsx`'s existing type-branching (next to
+the already-there `isTextBased`/URL branches) as a new `isFileBased` branch.
+
+**Lazy-loaded, not a static import** — confirmed live via a real production build that
+`react-pdf` + its `pdfjs-dist` dependency added ~380KB to the *main* bundle (every student
+downloads this on every page load, not just when viewing slides) plus pdf.js's own ~1.4MB web
+worker. `SlideViewer` is `React.lazy()`-imported from `StudyLibrary.tsx` instead, wrapped in
+`<Suspense>` — confirmed via the build output that this actually works, not just that it compiles:
+the main chunk dropped back to its pre-Slides size (267KB), with `react-pdf`/`pdfjs-dist` now in
+their own separate chunk, fetched only the moment someone actually opens a Slides material.
+
+**The PWA service worker (§4i) needed the same fix a second way.** `generateSW`'s default
+behavior precaches *everything* in the build output — including a lazy chunk, since it exists as a
+real file regardless of when the app actually requests it. That would've quietly undone the whole
+point of the lazy-loading above: every student's service worker eagerly downloading that same
+~380KB + 1.4MB combo in the background right after install, on what may be a limited mobile data
+plan, whether they ever open a slide deck or not. `vite.config.ts`'s `VitePWA()` call now excludes
+both from the precache list (`workbox.globIgnores`) and instead caches them reactively
+(`runtimeCaching`, `CacheFirst`) the moment they're actually requested — confirmed via the build
+output that the precache manifest dropped back from 12 entries/671KB to 10 entries/297KB (matching
+§4i's original pre-Slides numbers), and via `grep`ing the generated `dist/sw.js` that the
+runtime-caching rule actually made it in, not just that the config was accepted.
+
+**Not yet verified**: an actual slide deck rendering correctly on a real phone/browser — same
+"no browser automation in this session" gap as everything else in this app. The PDF-viewing
+mechanics (pdf.js parsing a real multimodal-tested PDF, confirmed byte-identical via the backend's
+own `Http::fake()` check) are sound in isolation; seeing `<Document>`/`<Page>` actually paint
+something on screen is not.
+
 ## 5) Verified
 
 - `php artisan test` — 164/164 (up from 146; Support's two test files added 17 tests this round —
@@ -557,3 +598,8 @@ real-device/real-browser behaviors, not something a build log confirms).
    Once deployed to Netlify, worth checking: does an install prompt actually appear (Android
    Chrome), does `apple-touch-icon.png` show up right on iOS's home screen, and does a second
    offline-ish visit actually load instantly from the service worker's cache.
+8. **Slides materials, on a real device** (§4j) — upload a real PDF as admin, view it as a student
+   on an actual phone (confirm `<Document>`/`<Page>` render, Prev/Next work, the lazy chunk
+   actually fetches on demand rather than up front), and once Gemini's `503 UNAVAILABLE` clears,
+   confirm a real AI Practice set generated from a slide-deck-only topic produces genuinely
+   content-grounded questions, not just the template fallback this kept returning during this pass.

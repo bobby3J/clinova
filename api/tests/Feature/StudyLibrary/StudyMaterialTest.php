@@ -7,7 +7,9 @@ use App\Domain\Shared\Events\AdminActionPerformed;
 use App\Domain\StudyLibrary\Models\StudyMaterial;
 use App\Domain\StudyLibrary\Models\Topic;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\CreatesUsers;
 use Tests\TestCase;
 
@@ -232,5 +234,75 @@ class StudyMaterialTest extends TestCase
             ])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('body');
+    }
+
+    public function test_admin_can_upload_a_slide_deck(): void
+    {
+        Storage::fake('public');
+        $topic = Topic::factory()->create();
+
+        // post(), not postJson() — see SoundTest's matching test for why:
+        // postJson() JSON-encodes the body, which can't carry a real
+        // UploadedFile.
+        $response = $this->actingAs($this->admin())
+            ->post('/api/study-library/materials', [
+                'topic_id' => $topic->id,
+                'type' => 'slides',
+                'title' => 'Week 3 — Fluid Balance',
+                'slide_file' => UploadedFile::fake()->create('week3.pdf', 500, 'application/pdf'),
+            ]);
+
+        $response->assertCreated();
+        $response->assertJsonPath('data.body', null);
+        $response->assertJsonPath('data.url', null);
+
+        $material = StudyMaterial::where('title', 'Week 3 — Fluid Balance')->firstOrFail();
+        $this->assertStringContainsString('materials/', $material->file_path);
+        $this->assertStringContainsString('/storage/materials/', $material->resolvedFileUrl());
+        $this->assertNotEmpty(Storage::disk('public')->files('materials'));
+    }
+
+    public function test_creating_a_slide_deck_without_a_file_fails_validation(): void
+    {
+        $topic = Topic::factory()->create();
+
+        $this->actingAs($this->admin())
+            ->postJson('/api/study-library/materials', [
+                'topic_id' => $topic->id,
+                'type' => 'slides',
+                'title' => 'Missing file',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('slide_file');
+    }
+
+    public function test_admin_can_replace_a_slide_decks_file_on_update(): void
+    {
+        Storage::fake('public');
+        $material = StudyMaterial::factory()->slides()->create();
+
+        $response = $this->actingAs($this->admin())
+            ->post("/api/study-library/materials/{$material->id}", [
+                '_method' => 'PATCH',
+                'slide_file' => UploadedFile::fake()->create('v2.pdf', 500, 'application/pdf'),
+            ]);
+
+        $response->assertOk();
+        $material->refresh();
+        $this->assertStringContainsString('materials/', $material->file_path);
+        $this->assertNotEmpty(Storage::disk('public')->files('materials'));
+    }
+
+    public function test_a_non_slides_material_has_no_file_url(): void
+    {
+        $material = StudyMaterial::factory()->published()->create([
+            'type' => 'note',
+            'body' => 'Plain text content.',
+        ]);
+
+        $response = $this->actingAs($this->student())
+            ->getJson("/api/study-library/materials/{$material->id}");
+
+        $response->assertOk()->assertJsonPath('data.file_url', null);
     }
 }

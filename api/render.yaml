@@ -52,9 +52,12 @@ services:
       - key: SANCTUM_STATEFUL_DOMAINS
         sync: false
 
-      # Backblaze B2 (S3-compatible) — only used for sound uploads,
-      # see config/filesystems.php's 'sounds_disk'.
+      # Supabase Storage (S3-compatible) — sound uploads (sounds_disk) and
+      # Slides study materials (materials_disk), same bucket/credentials,
+      # separate settings. See config/filesystems.php.
       - key: SOUNDS_DISK
+        value: s3
+      - key: MATERIALS_DISK
         value: s3
       - key: AWS_ACCESS_KEY_ID
         sync: false
@@ -68,6 +71,8 @@ services:
         sync: false
       - key: AWS_USE_PATH_STYLE_ENDPOINT
         value: "true"
+      - key: SUPABASE_PUBLIC_URL
+        sync: false
 
       - key: GEMINI_API_KEY
         sync: false

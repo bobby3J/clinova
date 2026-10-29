@@ -64,8 +64,9 @@ class Sound extends Model
      * read — "AccessDenied: Missing signature" — even on a public bucket.
      * Only Supabase's separate *native* public-object URL, a different
      * hostname and path entirely, actually serves an unsigned public GET.
-     * `sounds_public_url_base` is that project base URL; when it's set,
-     * it wins over the disk's own `->url()` for exactly this reason.
+     * `supabase_public_url_base` (shared with StudyMaterial::resolvedFileUrl()
+     * — same Supabase project) is that project base URL; when it's set, it
+     * wins over the disk's own `->url()` for exactly this reason.
      */
     public function resolvedUrl(): ?string
     {
@@ -73,7 +74,7 @@ class Sound extends Model
             return $this->file_url;
         }
 
-        $publicUrlBase = config('filesystems.sounds_public_url_base');
+        $publicUrlBase = config('filesystems.supabase_public_url_base');
 
         if ($publicUrlBase) {
             $bucket = config('filesystems.disks.s3.bucket');

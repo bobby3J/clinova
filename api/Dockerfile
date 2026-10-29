@@ -42,10 +42,24 @@ COPY --from=vendor /app /app
 # workaround needed here the way local `artisan serve` needed one; this
 # Dockerfile controls php.ini outright. Matches api/public/.user.ini's
 # values so local and production behavior agree.
+#
+# max_execution_time matters for a reason distinct from uploads: PHP's
+# default (30s) killed a real AI Practice generation request mid-flight
+# once Slides materials started sending a PDF to Gemini as part of the
+# prompt — a multimodal call genuinely takes longer than a plain-text one.
+# Confirmed live, twice: 30s wasn't enough to even reach
+# GeminiQuestionGenerator's own Http::timeout() at all; raising that
+# timeout to 90s then hit it exactly too (a PDF-attached Gemini request
+# can genuinely take 60-90s+ server-side). 120s here gives real headroom
+# above that 90s HTTP timeout, not a coincidentally-close number.
+# nginx.conf.template's fastcgi_read_timeout is raised to match — nginx's
+# own default (60s) would otherwise cut the connection to php-fpm well
+# before either of these.
 RUN { \
         echo "upload_max_filesize=20M"; \
         echo "post_max_size=25M"; \
         echo "memory_limit=256M"; \
+        echo "max_execution_time=120"; \
     } > /usr/local/etc/php/conf.d/uploads.ini
 
 COPY docker/nginx.conf.template /etc/nginx/http.d/default.conf.template

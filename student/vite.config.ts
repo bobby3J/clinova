@@ -30,6 +30,30 @@ export default defineConfig({
       // see install/offline behavior, test against a production build:
       // `npm run build && npm run preview`.
       includeAssets: ["images/logo/clinova-mark.svg"],
+      workbox: {
+        // SlideViewer.tsx is a lazy import specifically so react-pdf +
+        // pdfjs-dist (~380KB) and pdf.js's own worker (~1.4MB) aren't in
+        // the bundle every student downloads on first visit regardless of
+        // whether they ever open a Slides material — generateSW's default
+        // precache-everything-in-dist behavior would undo that entirely,
+        // eagerly fetching both in the background right after install on
+        // what may be a limited mobile data plan. Excluded from precache;
+        // runtimeCaching below still caches them (CacheFirst) the moment
+        // someone actually opens a slide deck, so a second viewing is
+        // still instant/offline-capable — just not paid for up front by
+        // everyone.
+        globIgnores: ["**/SlideViewer-*.{js,css}", "**/pdf.worker.min-*.mjs"],
+        runtimeCaching: [
+          {
+            urlPattern: /\/assets\/(SlideViewer-|pdf\.worker\.min-)/,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "slide-viewer-chunk",
+              expiration: { maxEntries: 4 },
+            },
+          },
+        ],
+      },
       manifest: {
         name: "Clinova",
         short_name: "Clinova",

@@ -7,7 +7,7 @@
 
 export type Track = "nursing" | "midwifery";
 export type ContentStatus = "draft" | "in_review" | "published";
-export type MaterialType = "note" | "video" | "audio" | "tip";
+export type MaterialType = "note" | "video" | "audio" | "tip" | "slides";
 export type ProgressStatus = "new" | "learning" | "mastered";
 export type SessionType = "focus" | "break";
 
