@@ -19,6 +19,7 @@ import {
   AlertIcon,
   AudioIcon,
   CheckCircleIcon,
+  ChevronLeftIcon,
   DocsIcon,
   EyeIcon,
   FileIcon,
@@ -438,8 +439,14 @@ export default function StudyLibrary() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Subjects & topics browser */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:col-span-1">
+        {/* Subjects & topics browser — hidden on mobile once a topic is
+            picked, so the materials panel below isn't just more content to
+            scroll past; lg+ always shows both side by side. */}
+        <div
+          className={`rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:col-span-1 lg:block ${
+            selectedTopicId !== null ? "hidden" : ""
+          }`}
+        >
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400">
               Subjects &amp; topics
@@ -560,8 +567,24 @@ export default function StudyLibrary() {
           )}
         </div>
 
-        {/* Materials panel */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:col-span-2">
+        {/* Materials panel — on mobile this only appears once a topic is
+            picked (the back button below returns to the tree); lg+ always
+            shows both side by side, so the back button is lg:hidden. */}
+        <div
+          className={`rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:col-span-2 lg:block ${
+            selectedTopicId === null ? "hidden" : ""
+          }`}
+        >
+          {selectedTopicId !== null && (
+            <button
+              type="button"
+              onClick={() => setSelectedTopicId(null)}
+              className="mb-4 flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 lg:hidden"
+            >
+              <ChevronLeftIcon className="h-4 w-4" />
+              Topics
+            </button>
+          )}
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400">
               {selectedTopicName
