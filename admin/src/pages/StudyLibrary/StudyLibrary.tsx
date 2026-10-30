@@ -567,14 +567,11 @@ export default function StudyLibrary() {
           )}
         </div>
 
-        {/* Materials panel — on mobile this only appears once a topic is
-            picked (the back button below returns to the tree); lg+ always
-            shows both side by side, so the back button is lg:hidden. */}
-        <div
-          className={`rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:col-span-2 lg:block ${
-            selectedTopicId === null ? "hidden" : ""
-          }`}
-        >
+        {/* Materials panel — stacks below the tree on mobile (so the
+            "pick a topic" placeholder shows there too), but once a topic is
+            picked the tree above hides and a back button appears, same
+            drill-down as before. lg+ always shows both side by side. */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:col-span-2">
           {selectedTopicId !== null && (
             <button
               type="button"
@@ -607,7 +604,11 @@ export default function StudyLibrary() {
                 Select a topic
               </p>
               <p className="text-xs text-gray-400">
-                Pick a topic on the left to see its materials.
+                <span className="lg:hidden">Pick a topic above</span>
+                <span className="hidden lg:inline">
+                  Pick a topic on the left
+                </span>{" "}
+                to see its materials.
               </p>
             </div>
           ) : materialsLoading ? (
