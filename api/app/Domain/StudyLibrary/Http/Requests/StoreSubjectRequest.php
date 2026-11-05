@@ -2,6 +2,8 @@
 
 namespace App\Domain\StudyLibrary\Http\Requests;
 
+use App\Domain\Shared\Enums\AcademicYear;
+use App\Domain\Shared\Enums\Semester;
 use App\Domain\Shared\Enums\Track;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -25,6 +27,8 @@ class StoreSubjectRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'track' => ['required', Rule::enum(Track::class)],
+            'year' => ['required', Rule::enum(AcademicYear::class)],
+            'semester' => ['required', Rule::enum(Semester::class)],
         ];
     }
 }

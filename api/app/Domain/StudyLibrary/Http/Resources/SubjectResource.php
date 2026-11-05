@@ -20,6 +20,8 @@ class SubjectResource extends JsonResource
             'name' => $this->name,
             'slug' => $this->slug,
             'track' => $this->track->value,
+            'year' => $this->year->value,
+            'semester' => $this->semester->value,
             // whenLoaded() only includes topics in the JSON if the
             // controller actually eager-loaded them (->with('topics')).
             // Without this guard, touching $this->topics here would fire

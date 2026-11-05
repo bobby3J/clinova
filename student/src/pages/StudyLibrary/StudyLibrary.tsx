@@ -14,7 +14,14 @@ import {
 } from "../../components/icons";
 import { useAuth } from "../../context/AuthContext";
 import { getSubjects, getTopics, getTopicMaterials } from "../../lib/studyLibrary";
-import type { Subject, Topic, StudyMaterial, MaterialType } from "../../types/studyLibrary";
+import type {
+  AcademicYear,
+  Semester,
+  Subject,
+  Topic,
+  StudyMaterial,
+  MaterialType,
+} from "../../types/studyLibrary";
 
 // Lazy, not a static import — react-pdf + pdfjs-dist added ~380KB to the
 // main bundle, downloaded by every student on every page load regardless
@@ -22,7 +29,13 @@ import type { Subject, Topic, StudyMaterial, MaterialType } from "../../types/st
 // fetched only the moment someone actually views one.
 const SlideViewer = lazy(() => import("../../components/SlideViewer"));
 
-type Level = "subjects" | "topics" | "materials" | "detail";
+type Level =
+  | "years"
+  | "semesters"
+  | "subjects"
+  | "topics"
+  | "materials"
+  | "detail";
 
 const TYPE_ICON: Record<MaterialType, typeof BookIcon> = {
   note: BookIcon,
@@ -30,6 +43,34 @@ const TYPE_ICON: Record<MaterialType, typeof BookIcon> = {
   audio: AudioIcon,
   tip: AlertIcon,
   slides: SlidesIcon,
+};
+
+// Year/Semester are a fixed 4x2 grid — organizing structure on top of
+// Subject, not anything a student creates. Reuses this app's existing
+// accent tokens (no blue-light here, unlike admin) so the new landing
+// screens feel native, not bolted on.
+const YEAR_OPTIONS: { value: AcademicYear; label: string }[] = [
+  { value: 1, label: "First Year" },
+  { value: 2, label: "Second Year" },
+  { value: 3, label: "Third Year" },
+  { value: 4, label: "Fourth Year" },
+];
+
+const SEMESTER_OPTIONS: { value: Semester; label: string }[] = [
+  { value: 1, label: "First Semester" },
+  { value: 2, label: "Second Semester" },
+];
+
+const YEAR_ACCENT: Record<AcademicYear, string> = {
+  1: "bg-brand-50 text-brand-600",
+  2: "bg-success-50 text-success-600",
+  3: "bg-warning-50 text-warning-600",
+  4: "bg-error-50 text-error-600",
+};
+
+const SEMESTER_ACCENT: Record<Semester, string> = {
+  1: YEAR_ACCENT[1],
+  2: YEAR_ACCENT[2],
 };
 
 /** Note and Tip both carry their content as body text; Video/Audio carry a URL instead. */
@@ -52,7 +93,12 @@ function isFileBased(type: MaterialType): boolean {
  */
 export default function StudyLibrary() {
   const { user } = useAuth();
-  const [level, setLevel] = useState<Level>("subjects");
+  const [level, setLevel] = useState<Level>("years");
+
+  const [selectedYear, setSelectedYear] = useState<AcademicYear | null>(null);
+  const [selectedSemester, setSelectedSemester] = useState<Semester | null>(
+    null,
+  );
 
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
@@ -75,6 +121,16 @@ export default function StudyLibrary() {
       .catch(() => setError("Couldn't load subjects. Check your connection and try again."))
       .finally(() => setLoading(false));
   }, [user?.track]);
+
+  function openYear(year: AcademicYear) {
+    setSelectedYear(year);
+    setLevel("semesters");
+  }
+
+  function openSemester(semester: Semester) {
+    setSelectedSemester(semester);
+    setLevel("subjects");
+  }
 
   function openSubject(subject: Subject) {
     setSelectedSubject(subject);
@@ -113,24 +169,53 @@ export default function StudyLibrary() {
     } else if (level === "topics") {
       setSelectedSubject(null);
       setLevel("subjects");
+    } else if (level === "subjects") {
+      setSelectedSemester(null);
+      setLevel("semesters");
+    } else if (level === "semesters") {
+      setSelectedYear(null);
+      setLevel("years");
     }
   }
 
+  const visibleSubjects = subjects.filter(
+    (subject) =>
+      subject.year === selectedYear && subject.semester === selectedSemester,
+  );
+
+  const yearCounts: Record<AcademicYear, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
+  subjects.forEach((subject) => {
+    yearCounts[subject.year] += 1;
+  });
+
+  const semesterCounts: Record<Semester, number> = { 1: 0, 2: 0 };
+  subjects
+    .filter((subject) => subject.year === selectedYear)
+    .forEach((subject) => {
+      semesterCounts[subject.semester] += 1;
+    });
+
   const title =
-    level === "subjects"
+    level === "years"
       ? "Study Library"
-      : level === "topics"
-        ? selectedSubject?.name ?? "Topics"
-        : level === "materials"
-          ? selectedTopic?.name ?? "Materials"
-          : selectedMaterial?.title ?? "Material";
+      : level === "semesters"
+        ? (selectedYear && YEAR_OPTIONS[selectedYear - 1].label) ?? "Semesters"
+        : level === "subjects"
+          ? (selectedSemester &&
+              SEMESTER_OPTIONS[selectedSemester - 1].label) ??
+            "Subjects"
+          : level === "topics"
+            ? selectedSubject?.name ?? "Topics"
+            : level === "materials"
+              ? selectedTopic?.name ?? "Materials"
+              : selectedMaterial?.title ?? "Material";
 
   return (
     <AppShell background="bg-gray-50">
       <MobileTopBar />
       <div className="px-5 pt-6 pb-28 lg:mx-auto lg:max-w-2xl lg:px-0 lg:pt-0 lg:pb-0">
         <div className="mb-5 flex items-center gap-3">
-          {level === "subjects" ? (
+          {level === "years" ? (
             <Link to="/" className="text-gray-500">
               <ChevronLeftIcon className="h-5 w-5" />
             </Link>
@@ -150,12 +235,62 @@ export default function StudyLibrary() {
           </div>
         ) : error ? (
           <p className="text-sm text-error-600">{error}</p>
+        ) : level === "years" ? (
+          <div className="grid grid-cols-2 gap-4">
+            {YEAR_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => openYear(opt.value)}
+                className="flex flex-col items-start rounded-2xl border border-gray-100 bg-white p-5 text-left shadow-theme-sm transition-transform active:scale-[0.98]"
+              >
+                <span
+                  className={`flex h-12 w-12 items-center justify-center rounded-xl text-lg font-bold ${YEAR_ACCENT[opt.value]}`}
+                >
+                  {opt.value}
+                </span>
+                <p className="mt-4 text-sm font-semibold text-gray-800">
+                  {opt.label}
+                </p>
+                <p className="mt-1 text-xs text-gray-400">
+                  {yearCounts[opt.value]} subject
+                  {yearCounts[opt.value] === 1 ? "" : "s"}
+                </p>
+              </button>
+            ))}
+          </div>
+        ) : level === "semesters" ? (
+          <div className="grid grid-cols-1 gap-4">
+            {SEMESTER_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => openSemester(opt.value)}
+                className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white p-5 text-left shadow-theme-sm transition-transform active:scale-[0.98]"
+              >
+                <span
+                  className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl text-xl font-bold ${SEMESTER_ACCENT[opt.value]}`}
+                >
+                  {opt.value}
+                </span>
+                <span>
+                  <p className="text-base font-semibold text-gray-800">
+                    {opt.label}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-400">
+                    {semesterCounts[opt.value]} subject
+                    {semesterCounts[opt.value] === 1 ? "" : "s"}
+                  </p>
+                </span>
+              </button>
+            ))}
+          </div>
         ) : level === "subjects" ? (
-          subjects.length === 0 ? (
-            <EmptyState text="No subjects available yet." />
+          visibleSubjects.length === 0 ? (
+            <EmptyState text="No subjects here yet." />
           ) : (
             <ul className="flex flex-col gap-3">
-              {subjects.map((subject) => (
+              {visibleSubjects.map((subject) => (
                 <li key={subject.id}>
                   <button
                     type="button"

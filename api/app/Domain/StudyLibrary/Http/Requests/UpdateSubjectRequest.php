@@ -2,6 +2,8 @@
 
 namespace App\Domain\StudyLibrary\Http\Requests;
 
+use App\Domain\Shared\Enums\AcademicYear;
+use App\Domain\Shared\Enums\Semester;
 use App\Domain\Shared\Enums\Track;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -25,6 +27,8 @@ class UpdateSubjectRequest extends FormRequest
         return [
             'name' => ['sometimes', 'string', 'max:255'],
             'track' => ['sometimes', Rule::enum(Track::class)],
+            'year' => ['sometimes', Rule::enum(AcademicYear::class)],
+            'semester' => ['sometimes', Rule::enum(Semester::class)],
         ];
     }
 }

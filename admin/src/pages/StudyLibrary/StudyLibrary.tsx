@@ -36,7 +36,13 @@ import {
   type MaterialType,
   type Track,
 } from "../../types/common";
-import type { Subject, StudyMaterial, Topic } from "../../types/studyLibrary";
+import type {
+  AcademicYear,
+  Semester,
+  Subject,
+  StudyMaterial,
+  Topic,
+} from "../../types/studyLibrary";
 
 type FormMode = { mode: "create" } | { mode: "edit"; material: StudyMaterial };
 
@@ -62,6 +68,47 @@ const TRACK_LABEL: Record<Track, string> = {
   midwifery: "Midwifery",
 };
 
+// Year/Semester are a fixed 4x2 grid — not admin-creatable, just the two
+// organizing dimensions every Subject now carries (see SubjectFormModal).
+const YEAR_OPTIONS: { value: AcademicYear; label: string }[] = [
+  { value: 1, label: "First Year" },
+  { value: 2, label: "Second Year" },
+  { value: 3, label: "Third Year" },
+  { value: 4, label: "Fourth Year" },
+];
+
+const SEMESTER_OPTIONS: { value: Semester; label: string }[] = [
+  { value: 1, label: "First Semester" },
+  { value: 2, label: "Second Semester" },
+];
+
+const YEAR_LABEL: Record<AcademicYear, string> = {
+  1: "First Year",
+  2: "Second Year",
+  3: "Third Year",
+  4: "Fourth Year",
+};
+
+const SEMESTER_LABEL: Record<Semester, string> = {
+  1: "First Semester",
+  2: "Second Semester",
+};
+
+// Same four-accent palette Dashboard/Home.tsx's KPI tiles already use —
+// one color per year keeps the grid visually distinct without inventing
+// new tokens.
+const YEAR_ACCENT: Record<AcademicYear, string> = {
+  1: "bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400",
+  2: "bg-blue-light-50 text-blue-light-600 dark:bg-blue-light-500/15 dark:text-blue-light-400",
+  3: "bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-orange-400",
+  4: "bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500",
+};
+
+const SEMESTER_ACCENT: Record<Semester, string> = {
+  1: YEAR_ACCENT[1],
+  2: YEAR_ACCENT[2],
+};
+
 export default function StudyLibrary() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [topicsBySubject, setTopicsBySubject] = useState<
@@ -72,6 +119,10 @@ export default function StudyLibrary() {
   const [treeReloadToken, setTreeReloadToken] = useState(0);
 
   const [activeTrack, setActiveTrack] = useState<Track | "all">("all");
+  const [selectedYear, setSelectedYear] = useState<AcademicYear | null>(null);
+  const [selectedSemester, setSelectedSemester] = useState<Semester | null>(
+    null,
+  );
   const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
 
@@ -177,7 +228,9 @@ export default function StudyLibrary() {
     };
   }, [selectedTopicId, materialsReloadToken]);
 
-  const visibleSubjects = useMemo(
+  // Track-filtered, but not yet year/semester-scoped — feeds the Year
+  // grid's per-year counts, which need to see every year at once.
+  const subjectsByTrack = useMemo(
     () =>
       activeTrack === "all"
         ? subjects
@@ -185,6 +238,39 @@ export default function StudyLibrary() {
     [subjects, activeTrack],
   );
 
+  // The actual tree/materials panel only ever renders once both a year and
+  // a semester are picked — everything in it is scoped to that one folder.
+  const visibleSubjects = useMemo(() => {
+    if (selectedYear === null || selectedSemester === null) return [];
+    return subjectsByTrack.filter(
+      (subject) =>
+        subject.year === selectedYear && subject.semester === selectedSemester,
+    );
+  }, [subjectsByTrack, selectedYear, selectedSemester]);
+
+  const yearCounts = useMemo(() => {
+    const counts: Record<AcademicYear, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
+    subjectsByTrack.forEach((subject) => {
+      counts[subject.year] += 1;
+    });
+    return counts;
+  }, [subjectsByTrack]);
+
+  const semesterCounts = useMemo(() => {
+    const counts: Record<Semester, number> = { 1: 0, 2: 0 };
+    if (selectedYear === null) return counts;
+    subjectsByTrack
+      .filter((subject) => subject.year === selectedYear)
+      .forEach((subject) => {
+        counts[subject.semester] += 1;
+      });
+    return counts;
+  }, [subjectsByTrack, selectedYear]);
+
+  const topicCountAll = subjectsByTrack.reduce(
+    (sum, subject) => sum + (topicsBySubject[subject.id]?.length ?? 0),
+    0,
+  );
   const topicCount = visibleSubjects.reduce(
     (sum, subject) => sum + (topicsBySubject[subject.id]?.length ?? 0),
     0,
@@ -207,16 +293,19 @@ export default function StudyLibrary() {
   }, [materials, search]);
 
   // Flat "Topic name — Subject name" list for the create-material modal's
-  // topic picker — built from whatever's already loaded, no extra fetch.
+  // topic picker — scoped to the currently open year/semester (same set
+  // visibleSubjects already resolved), not the whole curriculum. Empty
+  // until a semester is picked, which is also what keeps the "New
+  // Material" button disabled until then.
   const allTopicOptions = useMemo(
     () =>
-      subjects.flatMap((subject) =>
+      visibleSubjects.flatMap((subject) =>
         (topicsBySubject[subject.id] ?? []).map((topic) => ({
           id: topic.id,
           label: `${topic.name} — ${subject.name}`,
         })),
       ),
-    [subjects, topicsBySubject],
+    [visibleSubjects, topicsBySubject],
   );
 
   function handleSaved(saved: StudyMaterial) {
@@ -282,8 +371,12 @@ export default function StudyLibrary() {
       prev[subject.id] ? prev : { ...prev, [subject.id]: [] },
     );
     // Make sure the admin actually sees what they just created/edited,
-    // even if they were filtered to a different track at the time.
+    // even if they were filtered to a different track/year/semester at
+    // the time (the form's year/semester defaults to the open folder but
+    // stays editable, so the saved subject can land somewhere else).
     setActiveTrack("all");
+    setSelectedYear(subject.year);
+    setSelectedSemester(subject.semester);
   }
 
   function handleTopicSaved(subjectId: number, topic: Topic) {
@@ -410,8 +503,18 @@ export default function StudyLibrary() {
       )}
 
       <div className="mb-6 grid grid-cols-3 gap-4">
-        <StatTile label="Subjects" value={visibleSubjects.length} />
-        <StatTile label="Topics" value={topicCount} />
+        <StatTile
+          label="Subjects"
+          value={
+            selectedSemester === null
+              ? subjectsByTrack.length
+              : visibleSubjects.length
+          }
+        />
+        <StatTile
+          label="Topics"
+          value={selectedSemester === null ? topicCountAll : topicCount}
+        />
         <StatTile
           label={selectedTopicName ? "Materials in topic" : "Materials"}
           value={selectedTopicId === null ? null : visibleMaterials.length}
@@ -437,6 +540,62 @@ export default function StudyLibrary() {
           </button>
         ))}
       </div>
+
+      {selectedYear === null ? (
+        <div>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-400">
+            Browse by year
+          </h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {YEAR_OPTIONS.map((opt) => (
+              <FolderCard
+                key={opt.value}
+                label={opt.label}
+                badge={String(opt.value)}
+                accentClassName={YEAR_ACCENT[opt.value]}
+                count={yearCounts[opt.value]}
+                onClick={() => setSelectedYear(opt.value)}
+              />
+            ))}
+          </div>
+        </div>
+      ) : selectedSemester === null ? (
+        <div>
+          <button
+            type="button"
+            onClick={() => setSelectedYear(null)}
+            className="mb-3 flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          >
+            <ChevronLeftIcon className="h-4 w-4" />
+            Years
+          </button>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-400">
+            {YEAR_LABEL[selectedYear]} — browse by semester
+          </h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {SEMESTER_OPTIONS.map((opt) => (
+              <FolderCard
+                key={opt.value}
+                label={opt.label}
+                badge={String(opt.value)}
+                accentClassName={SEMESTER_ACCENT[opt.value]}
+                count={semesterCounts[opt.value]}
+                onClick={() => setSelectedSemester(opt.value)}
+                large
+              />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <>
+          <button
+            type="button"
+            onClick={() => setSelectedSemester(null)}
+            className="mb-4 flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          >
+            <ChevronLeftIcon className="h-4 w-4" />
+            {YEAR_LABEL[selectedYear]} · Semesters
+          </button>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Subjects & topics browser — hidden on mobile once a topic is
@@ -478,7 +637,8 @@ export default function StudyLibrary() {
             </div>
           ) : visibleSubjects.length === 0 ? (
             <p className="text-sm text-gray-400">
-              No subjects in this track yet.
+              No subjects in {selectedYear && YEAR_LABEL[selectedYear]} ·{" "}
+              {selectedSemester && SEMESTER_LABEL[selectedSemester]} yet.
             </p>
           ) : (
             <div className="flex flex-col gap-5">
@@ -713,6 +873,8 @@ export default function StudyLibrary() {
           )}
         </div>
       </div>
+        </>
+      )}
 
       {viewingMaterial && (
         <MaterialDetailModal
@@ -739,6 +901,8 @@ export default function StudyLibrary() {
       {subjectFormMode && (
         <SubjectFormModal
           subject={subjectFormMode.subject}
+          defaultYear={selectedYear ?? undefined}
+          defaultSemester={selectedSemester ?? undefined}
           onClose={() => setSubjectFormMode(null)}
           onSaved={handleSubjectSaved}
         />
@@ -754,6 +918,53 @@ export default function StudyLibrary() {
         />
       )}
     </>
+  );
+}
+
+/** A Year or Semester tile — the "appealing" landing step before the plain
+ * Subjects&Topics tree underneath it. Bigger, bolder than a tree row on
+ * purpose: these are the only two screens in the page that aren't a list. */
+function FolderCard({
+  label,
+  badge,
+  accentClassName,
+  count,
+  onClick,
+  large = false,
+}: {
+  label: string;
+  badge: string;
+  accentClassName: string;
+  count: number;
+  onClick: () => void;
+  large?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group flex flex-col items-start rounded-2xl border border-gray-200 bg-white text-left transition-all hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-theme-md dark:border-gray-800 dark:bg-white/[0.03] dark:hover:border-brand-500/30 ${
+        large ? "p-6" : "p-5"
+      }`}
+    >
+      <span
+        className={`flex items-center justify-center rounded-xl font-bold ${accentClassName} ${
+          large ? "h-14 w-14 text-xl" : "h-12 w-12 text-lg"
+        }`}
+      >
+        {badge}
+      </span>
+      <p
+        className={`mt-4 font-semibold text-gray-800 dark:text-white/90 ${
+          large ? "text-lg" : "text-base"
+        }`}
+      >
+        {label}
+      </p>
+      <p className="mt-1 text-xs text-gray-400">
+        {count} subject{count === 1 ? "" : "s"}
+      </p>
+    </button>
   );
 }
 

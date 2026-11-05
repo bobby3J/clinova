@@ -13,7 +13,13 @@ export interface Subject {
   name: string;
   slug: string;
   track: Track;
+  year: AcademicYear;
+  semester: Semester;
 }
+
+/** A fixed 4x2 grid — not student-facing CRUD, just an organizing dimension on Subject. */
+export type AcademicYear = 1 | 2 | 3 | 4;
+export type Semester = 1 | 2;
 
 export interface Topic {
   id: number;

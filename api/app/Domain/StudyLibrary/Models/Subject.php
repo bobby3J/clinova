@@ -2,6 +2,8 @@
 
 namespace App\Domain\StudyLibrary\Models;
 
+use App\Domain\Shared\Enums\AcademicYear;
+use App\Domain\Shared\Enums\Semester;
 use App\Domain\Shared\Enums\Track;
 use Database\Factories\SubjectFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -13,12 +15,15 @@ use Illuminate\Support\Str;
 
 /**
  * The top level of the content hierarchy: a Subject belongs to exactly one
- * Track (Nursing or Midwifery — see Sheet 05 of the blueprint) and contains
- * many Topics. Nothing about "what a subject is" is complex enough to need
- * an Action — creating/editing one is plain CRUD, so this domain's
- * SubjectController talks to this model directly.
+ * Track (Nursing or Midwifery — see Sheet 05 of the blueprint), exactly one
+ * AcademicYear (1-4), and exactly one Semester (1-2) — Year/Semester are a
+ * fixed 4x2 grid the frontends drill into before ever showing a Subject,
+ * not admin-creatable entities, so there's no table for either, just these
+ * two columns. Contains many Topics. Nothing about "what a subject is" is
+ * complex enough to need an Action — creating/editing one is plain CRUD, so
+ * this domain's SubjectController talks to this model directly.
  */
-#[Fillable(['name', 'track', 'slug'])]
+#[Fillable(['name', 'track', 'slug', 'year', 'semester'])]
 #[UseFactory(SubjectFactory::class)]
 
 class Subject extends Model
@@ -29,6 +34,8 @@ class Subject extends Model
     {
         return [
             'track' => Track::class,
+            'year' => AcademicYear::class,
+            'semester' => Semester::class,
         ];
     }
 

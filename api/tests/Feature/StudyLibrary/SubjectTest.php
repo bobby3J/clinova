@@ -19,12 +19,16 @@ class SubjectTest extends TestCase
             ->postJson('/api/study-library/subjects', [
                 'name' => 'Pediatric Nursing',
                 'track' => 'nursing',
+                'year' => 1,
+                'semester' => 1,
             ]);
 
         $response->assertCreated();
         $this->assertDatabaseHas('subjects', [
             'name' => 'Pediatric Nursing',
             'track' => 'nursing',
+            'year' => 1,
+            'semester' => 1,
         ]);
     }
 
@@ -34,10 +38,24 @@ class SubjectTest extends TestCase
             ->postJson('/api/study-library/subjects', [
                 'name' => 'Hacked Subject',
                 'track' => 'nursing',
+                'year' => 1,
+                'semester' => 1,
             ])
             ->assertForbidden();
 
         $this->assertDatabaseMissing('subjects', ['name' => 'Hacked Subject']);
+    }
+
+    public function test_creating_a_subject_without_a_year_or_semester_fails_validation(): void
+    {
+        $this->actingAs($this->admin())
+            ->postJson('/api/study-library/subjects', [
+                'name' => 'Pediatric Nursing',
+                'track' => 'nursing',
+            ])
+            ->assertInvalid(['year', 'semester']);
+
+        $this->assertDatabaseMissing('subjects', ['name' => 'Pediatric Nursing']);
     }
 
     public function test_admin_can_update_a_subject(): void
@@ -149,6 +167,8 @@ class SubjectTest extends TestCase
             ->postJson('/api/study-library/subjects', [
                 'name' => 'Community Health Nursing',
                 'track' => 'nursing',
+                'year' => 2,
+                'semester' => 1,
             ]);
 
         $response->assertCreated();

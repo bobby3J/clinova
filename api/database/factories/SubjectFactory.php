@@ -35,6 +35,8 @@ class SubjectFactory extends Factory
             'name' => $name,
             'slug' => Str::slug($name).'-'.fake()->unique()->numberBetween(1, 9999),
             'track' => fake()->randomElement(Track::cases()),
+            'year' => fake()->numberBetween(1, 4),
+            'semester' => fake()->randomElement([1, 2]),
         ];
     }
 }

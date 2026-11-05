@@ -7,20 +7,47 @@ import Button from "../../components/ui/button/Button";
 import { createSubject, updateSubject } from "../../lib/studyLibrary";
 import { ApiError } from "../../types/common";
 import type { Track } from "../../types/common";
-import type { Subject } from "../../types/studyLibrary";
+import type { AcademicYear, Semester, Subject } from "../../types/studyLibrary";
+
+const YEAR_OPTIONS: { value: AcademicYear; label: string }[] = [
+  { value: 1, label: "First Year" },
+  { value: 2, label: "Second Year" },
+  { value: 3, label: "Third Year" },
+  { value: 4, label: "Fourth Year" },
+];
+
+const SEMESTER_OPTIONS: { value: Semester; label: string }[] = [
+  { value: 1, label: "First Semester" },
+  { value: 2, label: "Second Semester" },
+];
 
 type Props = {
   /** Editing an existing subject, or creating a new one. */
   subject: Subject | null;
+  /** Only used in create mode — pre-fills from the folder the admin has open, still editable. */
+  defaultYear?: AcademicYear;
+  defaultSemester?: Semester;
   onClose: () => void;
   onSaved: (subject: Subject) => void;
 };
 
-export default function SubjectFormModal({ subject, onClose, onSaved }: Props) {
+export default function SubjectFormModal({
+  subject,
+  defaultYear,
+  defaultSemester,
+  onClose,
+  onSaved,
+}: Props) {
   const isEdit = subject !== null;
 
   const [name, setName] = useState(subject?.name ?? "");
   const [track, setTrack] = useState<Track>(subject?.track ?? "nursing");
+  const [year, setYear] = useState<AcademicYear>(
+    subject?.year ?? defaultYear ?? 1,
+  );
+  const [semester, setSemester] = useState<Semester>(
+    subject?.semester ?? defaultSemester ?? 1,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>(
@@ -34,8 +61,8 @@ export default function SubjectFormModal({ subject, onClose, onSaved }: Props) {
     setSubmitting(true);
     try {
       const res = isEdit
-        ? await updateSubject(subject.id, { name, track })
-        : await createSubject({ name, track });
+        ? await updateSubject(subject.id, { name, track, year, semester })
+        : await createSubject({ name, track, year, semester });
       onSaved(res.data);
     } catch (err) {
       if (err instanceof ApiError && err.status === 422 && err.errors) {
@@ -90,6 +117,40 @@ export default function SubjectFormModal({ subject, onClose, onSaved }: Props) {
               <option value="nursing">Nursing</option>
               <option value="midwifery">Midwifery</option>
             </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="subject_year">Year</Label>
+              <select
+                id="subject_year"
+                value={year}
+                onChange={(e) => setYear(Number(e.target.value) as AcademicYear)}
+                className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/20 dark:border-gray-700 dark:text-white/90"
+              >
+                {YEAR_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <Label htmlFor="subject_semester">Semester</Label>
+              <select
+                id="subject_semester"
+                value={semester}
+                onChange={(e) => setSemester(Number(e.target.value) as Semester)}
+                className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/20 dark:border-gray-700 dark:text-white/90"
+              >
+                {SEMESTER_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
