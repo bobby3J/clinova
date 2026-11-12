@@ -16,6 +16,15 @@ services:
         value: production
       - key: APP_DEBUG
         value: "false"
+      # Laravel's own default ('stack' -> 'single') writes exceptions to a
+      # file inside the container's ephemeral filesystem — invisible to
+      # Render's log viewer, which only ever shows what the supervised
+      # processes write to stdout/stderr. 'stderr' is a channel Laravel
+      # ships out of the box; pairs with the Dockerfile's
+      # catch_workers_output=yes, which is what actually gets a php-fpm
+      # worker's writes there forwarded to the process Render is watching.
+      - key: LOG_CHANNEL
+        value: stderr
       - key: APP_KEY
         sync: false
       - key: APP_URL

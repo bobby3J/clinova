@@ -77,6 +77,14 @@ RUN { \
 # name across included files, last one wins. pm.max_requests recycles
 # workers periodically to guard against slow memory creep rather than
 # letting any one process run forever.
+#
+# catch_workers_output matters for a separate reason: FPM's default is to
+# send a worker's own stdout/stderr to /dev/null per the FastCGI spec, not
+# to the master process's log. Laravel writing to the 'stderr' channel
+# (see render.yaml's LOG_CHANNEL) is useless on Render unless this is on —
+# otherwise the exception that actually explains a 500 never reaches
+# anywhere Render's log viewer can show it, same blind spot as the
+# default file-based 'stack' channel this replaces.
 RUN { \
         echo "[www]"; \
         echo "pm.max_children=8"; \
@@ -84,6 +92,8 @@ RUN { \
         echo "pm.min_spare_servers=1"; \
         echo "pm.max_spare_servers=4"; \
         echo "pm.max_requests=500"; \
+        echo "catch_workers_output=yes"; \
+        echo "decorate_workers_output=no"; \
     } > /usr/local/etc/php-fpm.d/zz-pool-tuning.conf
 
 COPY docker/nginx.conf.template /etc/nginx/http.d/default.conf.template
