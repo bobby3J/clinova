@@ -62,6 +62,30 @@ RUN { \
         echo "max_execution_time=120"; \
     } > /usr/local/etc/php/conf.d/uploads.ini
 
+# The stock php-fpm image ships a "www" pool capped at pm.max_children=5 —
+# fine for quick requests, but AI Practice's Gemini calls above can hold a
+# worker for up to ~120s each. On Render's free plan, two or three of
+# those in flight at once exhausted the pool ("server reached
+# pm.max_children setting (5)" in the logs) and starved every other
+# request behind them, including a plain Slides upload, until it timed
+# out — surfacing as a generic failure in the admin console with no
+# Laravel exception to show for it, since the request never even got a
+# free worker to start.
+#
+# Named so it loads after (and overrides) www.conf in php-fpm.d's
+# alphabetical include order — FPM merges directives for the same pool
+# name across included files, last one wins. pm.max_requests recycles
+# workers periodically to guard against slow memory creep rather than
+# letting any one process run forever.
+RUN { \
+        echo "[www]"; \
+        echo "pm.max_children=8"; \
+        echo "pm.start_servers=2"; \
+        echo "pm.min_spare_servers=1"; \
+        echo "pm.max_spare_servers=4"; \
+        echo "pm.max_requests=500"; \
+    } > /usr/local/etc/php-fpm.d/zz-pool-tuning.conf
+
 COPY docker/nginx.conf.template /etc/nginx/http.d/default.conf.template
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/entrypoint.sh /entrypoint.sh
