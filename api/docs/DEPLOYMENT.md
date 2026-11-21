@@ -8,8 +8,8 @@ its platform support.
 | Piece | Service | Why |
 |---|---|---|
 | Laravel API | [Render](https://render.com) — free Web Service, Docker | No card for free tier; runs the `Dockerfile` in this repo |
-| MySQL database | [Aiven](https://aiven.io) — free-forever MySQL (1GB) | No card; genuinely persistent (not ephemeral like Render's own disk) |
-| Sound file storage | [Supabase Storage](https://supabase.com) — 1GB free | No card; S3-compatible, so `config/filesystems.php`'s existing `s3` disk works against it unchanged. Backblaze B2 was tried first — see §2's note on why it was dropped |
+| Postgres database | [Supabase](https://supabase.com) — free Postgres, same project as Storage below | Originally Aiven MySQL (its "free-forever" tier was retired Nov 2026 — new free MySQL services stopped Nov 6, existing ones powered off + deleted Dec 21); moved to Supabase's free Postgres instead of paying, one less free-tier service with its own lifecycle to track |
+| Sound + Slides file storage | [Supabase Storage](https://supabase.com) — 1GB free | No card; S3-compatible, so `config/filesystems.php`'s existing `s3` disk works against it unchanged. Backblaze B2 was tried first — see §2's note on why it was dropped |
 | Admin + Student frontends | [Netlify](https://netlify.com) — 2 separate sites | No card; `netlify.toml` already in both `admin/` and `student/` |
 
 I can't create any of these accounts myself — that part's on you. Once each exists, hand me the
@@ -22,28 +22,33 @@ Create accounts in this order (each later step needs values from the one before 
 values directly into the relevant dashboard where noted — never into chat — same practice as the
 Gemini key.
 
-1. **Aiven** (MySQL) → give me: host, port, database name, username, password.
-2. **Supabase Storage** (sound storage) → give me: Access Key ID, Secret Access Key, bucket name,
-   region, S3-compatible endpoint URL.
-3. **Render** (API) → nothing to give me *from* Render itself — instead, you paste the values
-   from steps 1-2 directly into Render's own env var dashboard (full list of which var gets which
+1. **Supabase** (Postgres database + Storage) → give me: the Database connection values (host,
+   port, database name, username, password — direct connection, not the pooler) and the Storage
+   S3 values (Access Key ID, Secret Access Key, bucket name, region, S3-compatible endpoint URL).
+   Same project for both.
+2. **Render** (API) → nothing to give me *from* Render itself — instead, you paste the values
+   from step 1 directly into Render's own env var dashboard (full list of which var gets which
    value is in render.yaml / step 3 below). Give me only: the resulting service URL once deployed
    (e.g. `https://clinova-api.onrender.com`).
-4. **Netlify** (both frontends) → give me: the two resulting site URLs once both are deployed
+3. **Netlify** (both frontends) → give me: the two resulting site URLs once both are deployed
    (e.g. `https://clinova-admin.netlify.app`, `https://clinova-student.netlify.app`) — I'll use
    these to update Render's `FRONTEND_URLS`/`SANCTUM_STATEFUL_DOMAINS`.
 
 Full step-by-step for each, including exactly which Render env var each value maps to, below.
 
-## 1. Aiven — MySQL
+## 1. Supabase — Postgres database
 
-1. Create a free account, create a MySQL service (1GB plan).
-2. From its overview page, copy: host, port, database name, username, password.
+1. In the same Supabase project used for Storage below, go to **Project Settings → Database**.
+2. Copy the **direct connection** values (not the "Transaction pooler"/"Session pooler" ones — this
+   app's traffic is low enough it doesn't need pgbouncer, and the pooler's host/port differ from
+   the direct ones): host, port (5432), database name, username, password.
 3. These five values go into Render's dashboard as `DB_HOST`, `DB_PORT`, `DB_DATABASE`,
    `DB_USERNAME`, `DB_PASSWORD` (see `render.yaml` — they're marked `sync: false`, meaning Render
-   requires typing them in by hand, it won't pull them from this file).
+   requires typing them in by hand, it won't pull them from this file). `DB_CONNECTION=pgsql` and
+   `DB_SSLMODE=require` are already set with real values in `render.yaml` — nothing to fill in for
+   those two.
 
-## 2. Supabase Storage — sound file storage
+## 2. Supabase Storage — sound + Slides file storage
 
 **Why Supabase and not Backblaze B2:** B2 was tried first — free, no card, S3-compatible, looked
 like a clean fit. Two real problems surfaced in practice: (1) B2 gates a bucket's first switch to
@@ -55,9 +60,9 @@ were correct, never resolved to a clear client-side cause. See `api/docs/ARCHITE
 same free-no-card S3-compatible shape, and critically, **public buckets are a normal first-class
 option there** (not card-gated), which sidesteps the entire presigned-URL question.
 
-1. Create a free account (GitHub or email, no card).
-2. Create a project (it also provisions a Postgres database — ignored here, this deployment keeps
-   using Aiven/MySQL; only Storage is used from Supabase).
+1. Create a free account (GitHub or email, no card) — skip if step 1 above already created the
+   project for the database.
+2. Create a project (this also provisions the Postgres database step 1 above uses).
 3. **Storage** → create a bucket (any name, e.g. `clinova-sounds`) — toggle **Public bucket** on.
    This only affects reads; uploads/deletes still require authorization via Supabase's RLS
    policies, so going public doesn't weaken write security.
@@ -83,9 +88,11 @@ option there** (not card-gated), which sidesteps the entire presigned-URL questi
      `Sound::resolvedUrl()`/`StudyMaterial::resolvedFileUrl()` fall back to a URL that uploads
      fine but never plays/displays.
 
-**Known caveat:** Supabase's free-tier projects pause after 7 days with zero activity (one-click
-resume from the dashboard, no data loss — not a concern once the app has real traffic, worth
-knowing for a quiet demo/student deployment).
+**Known caveat:** Supabase's free-tier projects pause after 7 days with zero *database* activity
+(one-click resume from the dashboard, no data loss) — this now takes the whole app down, not just
+Slides/Sound uploads, since the primary database lives here too.
+`.github/workflows/supabase-keepalive.yml` pings it on a schedule to prevent this; real app traffic
+would also keep it active on its own once there's enough of it.
 
 ## 3. Render — the API
 
@@ -98,7 +105,7 @@ knowing for a quiet demo/student deployment).
      writing to `.env`), paste the output in.
    - `APP_URL` — Render gives you the service's URL once created (e.g.
      `https://clinova-api.onrender.com`); come back and set this after the first deploy.
-   - The five `DB_*` values from Aiven (step 1).
+   - The five `DB_*` values from Supabase's Database settings (step 1).
    - The six B2/`AWS_*` values + `SOUNDS_DISK` + `MATERIALS_DISK` + `SUPABASE_PUBLIC_URL` (step 2).
    - `FRONTEND_URLS` and `SANCTUM_STATEFUL_DOMAINS` — placeholder for now
      (`https://placeholder.netlify.app`), real values come after step 4.

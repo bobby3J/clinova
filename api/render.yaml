@@ -30,8 +30,19 @@ services:
       - key: APP_URL
         sync: false
 
+      # Moved off Aiven MySQL (its free tier was retired) to Supabase's
+      # free Postgres — the same Supabase project already used for
+      # Storage, so one less free-tier service with its own lifecycle to
+      # track. DB_HOST/PORT/DATABASE/USERNAME/PASSWORD come from Supabase's
+      # dashboard: Project Settings -> Database -> Connection string
+      # (direct connection, not the pooler — this app isn't high-enough
+      # traffic to need pgbouncer, and the pooler's port/host differ).
+      # DB_SSLMODE=require because Supabase's Postgres rejects a plain
+      # connection outright rather than negotiating down.
       - key: DB_CONNECTION
-        value: mysql
+        value: pgsql
+      - key: DB_SSLMODE
+        value: require
       - key: DB_HOST
         sync: false
       - key: DB_PORT

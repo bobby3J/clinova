@@ -26,14 +26,26 @@ FROM php:8.5-fpm-alpine
 # `queue:work`'s graceful signal handling needs. gd/intl intentionally
 # omitted — nothing in this app uses image manipulation or locale-aware
 # formatting.
+#
+# pdo_pgsql + postgresql-libs/postgresql-dev: added when the primary
+# database moved off Aiven MySQL (free tier retired) to Supabase's free
+# Postgres. pdo_mysql stays installed too — not load-bearing for the app
+# anymore, but cheap to keep around rather than risk breaking anything
+# that still assumes it's there (migrations, local dev against a stray
+# MySQL instance, etc.). postgresql-dev is build-only (provides libpq
+# headers for docker-php-ext-install); postgresql-libs is the runtime
+# .so pdo_pgsql actually links against and has to survive past $PHPIZE_DEPS
+# cleanup.
 RUN apk add --no-cache \
     nginx \
     supervisor \
     mysql-client \
+    postgresql-libs \
     gettext \
     $PHPIZE_DEPS \
-    && docker-php-ext-install pdo_mysql bcmath pcntl \
-    && apk del $PHPIZE_DEPS
+    postgresql-dev \
+    && docker-php-ext-install pdo_mysql pdo_pgsql bcmath pcntl \
+    && apk del $PHPIZE_DEPS postgresql-dev
 
 WORKDIR /app
 COPY --from=vendor /app /app

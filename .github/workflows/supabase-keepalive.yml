@@ -23,3 +23,26 @@ jobs:
           status=$(curl -s -o /dev/null -w "%{http_code}" \
             "https://didrgwprjcozxbttdqzn.supabase.co/storage/v1/object/public/clinova/.keepalive")
           echo "Supabase responded with HTTP $status"
+
+      # Supabase's own FAQ says the pause clock specifically tracks
+      # *database* requests, not just any API traffic — the Storage ping
+      # above might not reset it on its own, and the primary app DB moved
+      # here (off Aiven MySQL, whose free tier was retired) in Nov 2026, so
+      # this one matters a lot more than the Storage ping does. Needs real
+      # credentials, so it's gated on the repo secrets existing rather than
+      # hardcoded like the Storage URL above — add SUPABASE_DB_HOST/PORT/
+      # NAME/USER/PASSWORD under Settings -> Secrets and variables ->
+      # Actions, same direct-connection values that go into Render's
+      # DB_* env vars.
+      - name: Ping Supabase Database
+        if: ${{ secrets.SUPABASE_DB_HOST != '' }}
+        env:
+          PGHOST: ${{ secrets.SUPABASE_DB_HOST }}
+          PGPORT: ${{ secrets.SUPABASE_DB_PORT }}
+          PGDATABASE: ${{ secrets.SUPABASE_DB_NAME }}
+          PGUSER: ${{ secrets.SUPABASE_DB_USER }}
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PGSSLMODE: require
+        run: |
+          sudo apt-get update -y -qq && sudo apt-get install -y -qq postgresql-client
+          psql -c "select 1;"
